@@ -363,9 +363,11 @@ def pantalla_excluidos(padre):
         campos=[("docente", "Docente", None), ("motivo", "Motivo", None)],
         leer=lambda: repositorio.leer_excluidos(RUTA_EXCEPCIONES),
         guardar=lambda filas: repositorio.guardar_excluidos(RUTA_EXCEPCIONES, filas),
-        opciones=lambda: {"docente": repositorio.nombres_docentes(RUTA_MAESTRO)},
+        opciones=lambda: {"docente": [n for n in repositorio.nombres_docentes(RUTA_MAESTRO)
+                                      if not any(maestro.misma_persona(n, f["docente"]) for f in t.filas)]},
         validar=lambda v: v)
-    t.ayuda_formulario = "Podés escribir el nombre como figura en Untis: Apellido, Nombre."
+    t.ayuda_formulario = ("Elegí el docente de la lista (no aparecen los que ya están excluidos) o escribilo como figura "
+                          "en Untis: Apellido, Nombre.")
     t.pack(fill="both", expand=True)
     return pantalla
 

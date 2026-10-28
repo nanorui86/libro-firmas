@@ -10,6 +10,7 @@ from datetime import date
 from clasificar import DIAS
 import excepciones
 import horarios_manuales
+import maestro
 import licencias
 
 MOTIVOS = ["licencia", "licencia por maternidad", "licencia por enfermedad", "licencia por cargo superior",
@@ -173,6 +174,8 @@ def guardar_excluidos(ruta, filas):
     for f in filas:
         if not f["docente"].strip():
             raise ValueError("Elegí el docente.")
+        if any(maestro.misma_persona(f["docente"], n["docente"]) for n in nuevas):
+            raise ValueError(f"{f['docente'].strip()} ya está en la lista de excluidos.")
         nuevas.append({"docente": f["docente"].strip(), "dias": DIAS_TODOS, "turno": "quitar", "desde": "", "hasta": "",
                        "motivo": f.get("motivo", "").strip()})
     otras = [f for f in _leer(ruta) if not _es_exclusion(f)]

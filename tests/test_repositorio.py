@@ -136,3 +136,12 @@ class Nombres(unittest.TestCase):
         self.assertTrue(maestro.misma_persona("PEREZ LIMA, A.", "Perez Lima, Ma. Alejandra"))
         self.assertTrue(maestro.misma_persona("SOSA,  Cesar", "SOSA, Cesar Daniel"))
         self.assertFalse(maestro.misma_persona("SOSA, Cesar", "SOSA, Mario"))
+
+
+class ExcluidosRepetidos(unittest.TestCase):
+    def test_no_deja_agregar_dos_veces(self):
+        with tempfile.TemporaryDirectory() as d:
+            ruta = os.path.join(d, "excepciones.csv")
+            with self.assertRaises(ValueError):
+                repositorio.guardar_excluidos(ruta, [{"docente": "Perez, Ana", "motivo": ""},
+                                                     {"docente": "PEREZ,  Ana", "motivo": ""}])
