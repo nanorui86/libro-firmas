@@ -107,6 +107,17 @@ def guardar_maestro(maestro, ruta):
             w.writerow(maestro[clave])
 
 
+def fijar_tratamiento(ruta_maestro, nombre, tratamiento):
+    """Guarda el tratamiento que el usuario eligió para un docente (lo confirma una persona, no se adivina)."""
+    if tratamiento not in ("Profesor", "Profesora"):
+        raise ValueError(f"tratamiento inválido: {tratamiento!r}")
+    maestro = cargar_maestro(ruta_maestro)
+    clave = clave_docente(nombre)
+    fila = maestro.setdefault(clave, {"clave": clave, "impreso": nombre_impreso(nombre), "tratamiento": ""})
+    fila["tratamiento"] = tratamiento
+    guardar_maestro(maestro, ruta_maestro)
+
+
 def completar_maestro(nombres, ruta_maestro, ruta_mdb, ruta_libro=None):
     """Agrega los docentes que falten. Devuelve (maestro, sin_tratamiento, discrepancias).
 

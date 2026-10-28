@@ -1,5 +1,19 @@
 # Libro de firmas docente: estado
 
+## 2026-10-28 (tarde): app de escritorio
+El usuario pidió una app para crear el listado sin pelearse con la línea de comandos ni con la impresión. Hecha con tkinter
+(stdlib): `app.py` + lanzador `Libro de firmas.pyw` + acceso directo en el Escritorio (`pythonw.exe` del `.venv`).
+- Pestañas: Armar libro (elige PDFs, arma en un hilo, conteos por día como renglones pautados, avisos, abrir en Excel,
+  informe, "Cómo imprimir"), Licencias y Horarios a mano (tablas editables que guardan al instante).
+- `libro_firmas.generar` ahora devuelve un `Resultado` (ok, informe, ruta, sin_tratamiento, problemas, conteo, avisos); `main` solo imprime.
+- Nuevo: `repositorio.py` (fechas dd/mm/aaaa <-> ISO, validación, estado de licencia) y `maestro.fijar_tratamiento`
+  (la ventana pregunta Profesor/Profesora cuando falta). 57 tests.
+- Diseño: paleta del propio libro (papel, verde de las franjas, tinta); no se tocó la tipografía/paleta cálida vigente.
+- Probado con el horario real: 18 s, mismos conteos que antes (tm 25/22/19/20/30, tmyt 29/24/35/29/17).
+- Decisión: NO hay botón de impresión automática hasta la prueba física (se explica cómo imprimir y se abre Excel).
+- Dos docentes figuran con otro nombre en el libro anterior (ortografía distinta); la ventana lo avisa como "puede estar
+  escrito distinto".
+
 ## 2026-10-28
 **Funciona de punta a punta** con el horario real del 16/10/2026: `libro_firmas.py` lee el PDF de Untis (66 docentes), suma
 los horarios de inglés transcriptos a mano, valida contra el PDF de cursos, asigna turno por docente y día, aplica excepciones
@@ -32,6 +46,7 @@ y licencias y llena el molde de Excel. 40 tests (`python -m unittest discover -s
 - Las "horas" de la cabecera pueden superar los módulos (clases simultáneas u horas fuera de grilla): aviso, no error.
 
 **Pendiente**
+- Que el usuario pruebe la app (doble clic en el acceso directo) y diga qué le falta.
 - Completar `desde`/`hasta` de las licencias (hoy "sin fecha de fin"; el informe lo recuerda).
 - Prueba física: imprimir una hoja y apoyarla sobre el libro real.
 - Subir los últimos cambios a GitHub cuando el usuario lo autorice (github.com/nanorui86/libro-firmas).

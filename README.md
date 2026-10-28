@@ -29,7 +29,21 @@ Un mismo docente puede estar en `tm` un día y en `tmyt` otro.
 5. `libro_firmas.py` orquesta y escribe `informe.txt`: diferencias contra el libro actual, docentes sin clases,
    excepciones vencidas, avisos de validación.
 
-## Uso
+## Uso con ventana (lo normal)
+
+Doble clic en `Libro de firmas.pyw` (o en el acceso directo del Escritorio, que usa `.venv\Scripts\pythonw.exe`).
+La ventana (`app.py`, tkinter) tiene tres pestañas:
+
+- **Armar libro**: elegir el PDF de profesores (y el de cursos, para controlar), tocar *Armar libro* (tarda unos 20 s),
+  mirar los conteos por día y la lista *Para revisar antes de imprimir*, y abrir el resultado en Excel. Si falta el
+  tratamiento de alguien, la ventana pregunta Profesor/Profesora y lo guarda. El botón *Cómo imprimir* explica la impresión.
+- **Licencias**: tabla editable (`datos/licencias.csv`), fechas como día/mes/año.
+- **Horarios a mano**: tabla editable (`datos/horarios_manuales.csv`) para los horarios que vienen en escaneos.
+
+`repositorio.py` es la capa de datos de las dos tablas (sin pantalla, con tests). Las rutas elegidas se recuerdan en
+`datos/app_config.json`. Si la ventana no abre, el error queda en `error_app.txt`.
+
+## Uso por línea de comandos
 
 ```
 python -m venv .venv

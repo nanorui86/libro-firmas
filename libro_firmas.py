@@ -10,6 +10,7 @@ import os
 import re
 import sys
 from collections import defaultdict
+from dataclasses import dataclass, field
 from datetime import date
 
 import pdfplumber
@@ -86,7 +87,18 @@ def ausentes_del_pdf(antes, nombres_pdf):
     )
 
 
-def main(argv=None):
+@dataclass
+class Resultado:
+    ok: bool
+    informe: str
+    ruta_libro: str = ""
+    sin_tratamiento: list = field(default_factory=list)  # docentes a los que falta Profesor/Profesora
+    problemas: list = field(default_factory=list)        # motivos por los que no se generó el libro
+    conteo: dict = field(default_factory=dict)           # {'tm': [n por día], 'tmyt': [...]}
+    avisos: list = field(default_factory=list)           # [(nivel, texto)]: 'aviso' o 'info'
+
+
+def crear_parser():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("profesores", help="PDF de horarios por docente")
     ap.add_argument("--cursos", help="PDF de horarios por curso (validación cruzada)")
@@ -99,12 +111,35 @@ def main(argv=None):
     ap.add_argument("--turnos-previos", default="datos/turnos_ultimo_libro.csv", help="memoria del último libro generado")
     ap.add_argument("--salida", default="salida")
     ap.add_argument("--fecha", help="fecha de referencia AAAA-MM-DD (por defecto, hoy)")
-    args = ap.parse_args(argv)
+    return ap
 
+
+def opciones(profesores, base=None, **cambios):
+    """Opciones de `generar` con los valores por defecto; las rutas relativas cuelgan de `base`."""
+    args = crear_parser().parse_args([profesores])
+    for nombre, valor in cambios.items():
+        setattr(args, nombre, valor)
+    if base:
+        for nombre in ("plantilla", "maestro", "mdb", "excepciones", "manuales", "licencias", "turnos_previos", "salida"):
+            ruta = getattr(args, nombre)
+            if ruta and not os.path.isabs(ruta):
+                setattr(args, nombre, os.path.join(base, ruta))
+    return args
+
+
+def main(argv=None):
+    resultado = generar(crear_parser().parse_args(argv))
+    print(resultado.informe)
+    return 0 if resultado.ok else 1
+
+
+def generar(args):
+    """Arma el libro. `args` tiene los campos de `crear_parser`; devuelve un `Resultado`."""
     hoy = date.fromisoformat(args.fecha) if args.fecha else date.today()
     os.makedirs(args.salida, exist_ok=True)
     informe = [f"Informe del {hoy.isoformat()} - horario: {os.path.basename(args.profesores)}"]
     detener = []
+    avisos_app = []  # (nivel, texto) para la ventana: lo que hay que mirar antes de imprimir
 
     docentes = parse_horario.leer_pdf(args.profesores)
     vigencia = fecha_vigencia(args.profesores)
@@ -121,10 +156,13 @@ def main(argv=None):
             informe.append("\nDocentes sin página en el PDF de profesores, reconstruidos desde el PDF de cursos:")
             for nombre, celdas in sorted(faltantes.items()):
                 informe.append(f"  {nombre}: {len(celdas)} módulos (REVISAR: el export de Untis la/lo dejó afuera)")
+                avisos_app.append(("aviso", f"{nombre} no tiene página en el PDF de profesores; se armó su horario con el PDF "
+                                            f"de cursos ({len(celdas)} módulos). Revisá que esté bien."))
                 docentes.append(parse_horario.Docente(nombre=nombre, horas="", ocupadas=set(celdas),
                                                       avisos=["tomado del PDF de cursos"]))
     else:
         informe.append("\nValidación cruzada: NO se hizo (falta --cursos)")
+        avisos_app.append(("aviso", "No se eligió el horario de cursos: no se controló si falta algún docente en el de profesores."))
 
     if os.path.exists(args.manuales):
         manuales = horarios_manuales.cargar(args.manuales)
@@ -152,7 +190,7 @@ def main(argv=None):
     notas_licencias, sin_datos = licencias.aplicar(
         asignacion, lic["vigentes"], lambda nombre: turnos_previos.buscar(nombre, *fuentes_previas)
     )
-    detener += [f"{n}: licencia vigente, pero no se sabe en qué turnos figuraba; cargarlo a mano en excepciones.csv"
+    detener += [f"{n}: tiene una licencia vigente, pero no se sabe en qué días y turnos figuraba (no estaba en el libro anterior)"
                 for n in sin_datos]
     en_libro = {clave for clave, _ in asignacion}
     sin_trat = [n for n in sin_trat if clave_docente(n) in en_libro]  # a quien no va en el libro no se le exige
@@ -161,6 +199,7 @@ def main(argv=None):
     if discrepancias:
         informe.append("\nDiscrepancias de tratamiento (se usó el .mdb):")
         informe += [f"  {d}" for d in discrepancias]
+        avisos_app += [("aviso", f"Tratamiento distinto en dos fuentes: {d}") for d in discrepancias]
 
     informe.append(f"\nExcepciones: {len(vigentes)} vigentes, {len(vencidas)} vencidas, {len(futuras)} futuras")
     informe += [
@@ -179,8 +218,12 @@ def main(argv=None):
     ]
     informe += notas_licencias
     informe += [f"  SIN FECHA DE FIN: {l['docente']}" for l in lic["sin_fin"]]
+    avisos_app += [("info", f"{l['docente']}: la licencia no tiene fecha de fin.") for l in lic["sin_fin"]]
     for l in lic["vencidas"]:
         tiene_clases = any(d.ocupadas and maestro.misma_persona(l["docente"], d.nombre) for d in docentes)
+        if not tiene_clases:
+            avisos_app.append(("aviso", f"{l['docente']}: la licencia venció el {l['hasta']:%d/%m/%Y} y no tiene clases en el "
+                                        "horario, así que ya no figura en el libro. ¿Volvió o se extiende la licencia?"))
         informe.append(
             f"  VENCIDA (ya no tiene efecto): {l['docente']} hasta {l['hasta']} - "
             + ("tiene clases en el horario: figura como cualquier docente" if tiene_clases
@@ -194,6 +237,7 @@ def main(argv=None):
     if sin_horas:
         informe.append("\nDocentes en el PDF sin ninguna clase, sin excepción y sin licencia (no figuran en el libro):")
         informe += [f"  {n}" for n in sin_horas]
+        avisos_app += [("aviso", f"{n} está en el horario pero sin ninguna clase ni licencia: no sale en el libro.") for n in sin_horas]
 
     listas = armar_listas(asignacion, maes)
     informe.append("\nCantidad de docentes por hoja y día:")
@@ -206,24 +250,29 @@ def main(argv=None):
                     if not any(maestro.misma_persona(n, e["docente"]) for e in vigentes) and not en_licencia(n)]  # los explicados ya figuran arriba
         informe.append(f"\nEstán en el libro actual y NO en el PDF de horarios ({len(ausentes)}):")
         informe += [f"  {n}" for n in ausentes] or ["  ninguno"]
+        avisos_app += [("aviso", f"{n} figuraba en el libro anterior y no aparece en el horario con ese nombre (puede estar "
+                                 "escrito distinto). Si es otra persona o ya no está, no sale en el libro.")
+                       for n in {clave_docente(n): n for n in ausentes}.values()]
         informe.append("\nDiferencias contra el libro actual, con los nombres parecidos ya emparejados (+ se agrega, - sale):")
         informe += diferencias(antes, listas) or ["  ninguna"]
 
     ruta_informe = os.path.join(args.salida, "informe.txt")
+    conteo = {turno: [len(dia) for dia in listas[turno]] for turno in listas}
     if detener:
         informe.append("\nNO SE GENERÓ EL LIBRO:")
         informe += [f"  {d}" for d in detener]
-        open(ruta_informe, "w", encoding="utf-8").write("\n".join(informe) + "\n")
-        print("\n".join(informe))
-        return 1
+        texto = "\n".join(informe) + "\n"
+        open(ruta_informe, "w", encoding="utf-8").write(texto)
+        return Resultado(False, texto, sin_tratamiento=sin_trat, problemas=detener, conteo=conteo, avisos=avisos_app)
 
     nombre = f"Lib. Firmas 2026 (horario {vigencia or hoy.isoformat()}).xlsx"
-    render_libro.render(args.plantilla, os.path.join(args.salida, nombre), listas)
+    ruta_libro = os.path.join(args.salida, nombre)
+    render_libro.render(args.plantilla, ruta_libro, listas)
     turnos_previos.guardar(listas, args.turnos_previos)  # para que las licencias recuerden los turnos de siempre
-    informe.append(f"\nGenerado: {os.path.join(args.salida, nombre)}")
-    open(ruta_informe, "w", encoding="utf-8").write("\n".join(informe) + "\n")
-    print("\n".join(informe))
-    return 0
+    informe.append(f"\nGenerado: {ruta_libro}")
+    texto = "\n".join(informe) + "\n"
+    open(ruta_informe, "w", encoding="utf-8").write(texto)
+    return Resultado(True, texto, ruta_libro=ruta_libro, conteo=conteo, avisos=avisos_app)
 
 
 if __name__ == "__main__":
