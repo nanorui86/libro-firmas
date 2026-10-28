@@ -1,0 +1,13 @@
+# Datos personales: nunca al repo
+entrada/
+salida/
+datos/
+*.pdf
+*.xls
+*.xlsx
+*.mdb
+*.untis
+docentes.csv
+excepciones.csv
+__pycache__/
+.venv/
