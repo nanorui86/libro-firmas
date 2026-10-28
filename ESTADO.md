@@ -1,5 +1,11 @@
 # Libro de firmas docente: estado
 
+## 2026-10-29: informe completo legible
+- "Ver informe completo" ahora es una ventana con tarjetas (`VentanaInforme` en `app.py`) armada por `informe_vista.py`, que
+  interpreta el texto de `informe.txt`: título + resumen en una etiqueta, "Qué hacer", docentes en negrita, celdas sin curso como
+  "Mar mód. 3-4", cambios como tabla Entra/Sale con hoja y día, conteo como tabla. `informe.txt` sigue siendo texto plano.
+- Excepciones y licencias se escriben en el informe en una línea por docente, sin repetir.
+
 ## 2026-10-28 (noche): ajustes tras probar la app
 - Nombres: una inicial ("A.") ahora encaja con el nombre que empieza así, y la comparación de "figuraba en el libro anterior" usa
   también el nombre tal como se imprime. Un docente cuyo nombre en Untis difiere del del libro (nombre compuesto) se arregla

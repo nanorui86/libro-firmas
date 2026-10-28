@@ -13,6 +13,7 @@ import tkinter as tk
 from datetime import date
 from tkinter import filedialog, messagebox, ttk
 
+import informe_vista
 import libro_firmas
 import maestro
 import repositorio
@@ -579,17 +580,7 @@ class PantallaArmar(Pantalla):
             os.startfile(os.path.dirname(self.ruta_libro))
 
     def ver_informe(self):
-        ventana = tk.Toplevel(self)
-        ventana.title("Informe completo")
-        ventana.configure(bg=TARJETA)
-        ventana.geometry("820x560")
-        texto = tk.Text(ventana, wrap="word", bg=TARJETA, fg=TEXTO, font=("Consolas", 10), padx=14, pady=12, relief="flat")
-        barra = ttk.Scrollbar(ventana, command=texto.yview)
-        texto.configure(yscrollcommand=barra.set)
-        barra.pack(side="right", fill="y")
-        texto.pack(fill="both", expand=True)
-        texto.insert("1.0", self.informe)
-        texto.configure(state="disabled")
+        VentanaInforme(self, self.informe)
 
     def como_imprimir(self):
         ventana = tk.Toplevel(self)
@@ -607,6 +598,115 @@ class PantallaArmar(Pantalla):
 
 
 # ---------- ventana ----------
+
+class VentanaInforme(tk.Toplevel):
+    """El informe de la corrida como tarjetas: una por sección, con lo que hay que hacer y filas legibles."""
+
+    HOJAS = {"tm": "Mañana", "tmyt": "Mañana y tarde"}
+
+    def __init__(self, padre, texto):
+        super().__init__(padre)
+        self.title("Informe completo")
+        self.configure(bg=FONDO)
+        self.geometry("940x720")
+        self.minsize(760, 480)
+        self.transient(padre.winfo_toplevel())
+        encabezado, secciones = informe_vista.parsear(texto)
+        lienzo = tk.Canvas(self, bg=FONDO, highlightthickness=0)
+        barra = ttk.Scrollbar(self, command=lienzo.yview)
+        lienzo.configure(yscrollcommand=barra.set)
+        barra.pack(side="right", fill="y")
+        lienzo.pack(side="left", fill="both", expand=True)
+        cuerpo = ttk.Frame(lienzo, padding=(26, 20, 26, 20))
+        ventana_id = lienzo.create_window(0, 0, window=cuerpo, anchor="nw")
+        lienzo.bind("<Configure>", lambda e: lienzo.itemconfigure(ventana_id, width=e.width))
+        cuerpo.bind("<Configure>", lambda _e: lienzo.configure(scrollregion=lienzo.bbox("all")))
+        self.bind("<MouseWheel>", lambda e: lienzo.yview_scroll(-1 * (e.delta // 120), "units"))
+        ttk.Label(cuerpo, text="Informe completo", style="Titulo.TLabel").pack(anchor="w")
+        for linea in encabezado:
+            ttk.Label(cuerpo, text=linea, style="Tenue.TLabel").pack(anchor="w")
+        ttk.Label(cuerpo, text="Cada tarjeta es una parte de la revisión. Debajo del título dice qué hacer; si dice "
+                               "\"nada\", es solo información.", style="Tenue.TLabel").pack(anchor="w", pady=(6, 14))
+        for sec in secciones:
+            self._tarjeta(cuerpo, sec).pack(fill="x", pady=(0, 12))
+
+    def _tarjeta(self, padre, sec):
+        color = {"error": ROJO}.get(sec["tipo"], TENUE)
+        t = Tarjeta(padre)
+        cab = ttk.Frame(t.interior, style="Tarjeta.TFrame")
+        cab.pack(fill="x")
+        tk.Label(cab, text=sec["titulo"].upper(), bg=TARJETA, fg=color, font=(FUENTE, 8, "bold"), anchor="w").pack(side="left")
+        if sec["detalle"]:
+            tk.Label(cab, text=sec["detalle"], bg=INDIGO_SUAVE, fg=INDIGO_OSCURO, font=(FUENTE, 9, "bold"), padx=8).pack(side="right")
+        if sec["ayuda"]:
+            ttk.Label(t.interior, text=sec["ayuda"], style="TenueT.TLabel", wraplength=800, justify="left").pack(anchor="w", pady=(6, 0))
+        marco = ttk.Frame(t.interior, style="Tarjeta.TFrame")
+        marco.pack(fill="x", pady=(10, 0))
+        if sec["tipo"] == "cambios":
+            self._cambios(marco, sec["filas"])
+        elif sec["tipo"] == "conteo":
+            self._conteo(marco, sec["filas"])
+        else:
+            self._lista(marco, sec["filas"], error=sec["tipo"] == "error")
+        return t
+
+    def _lista(self, marco, filas, error=False):
+        if not filas:
+            return
+        texto = tk.Text(marco, wrap="word", bg=TARJETA, fg=TEXTO, relief="flat", font=(FUENTE, 10), padx=0, pady=0,
+                        highlightthickness=0, cursor="arrow", height=1)
+        texto.tag_configure("nombre", font=(FUENTE, 10, "bold"))
+        texto.tag_configure("revisar", foreground=AMBAR)
+        texto.tag_configure("error", foreground=ROJO)
+        texto.tag_configure("pauta", spacing3=5)
+        for fila in filas:
+            for prefijo in ("aviso ", "ERROR "):
+                if fila.startswith(prefijo):
+                    fila = fila[len(prefijo):]
+            nombre, dos_puntos, resto = fila.partition(": ")
+            alerta = "error" if error or fila.startswith("ERROR") else "revisar" if ("REVISAR" in fila or fila.startswith("VENCIDA")) else None
+            tags = ("pauta",) + ((alerta,) if alerta else ())
+            texto.insert("end", "•  ", tags)
+            if dos_puntos and len(nombre) < 60:
+                texto.insert("end", nombre, tags + ("nombre",))
+                texto.insert("end", ": " + resto + "\n", tags)
+            else:
+                texto.insert("end", fila + "\n", tags)
+        texto.configure(state="disabled")
+        texto.pack(fill="x")
+        texto.bind("<Configure>", lambda _e, t=texto: self._ajustar_alto(t))
+
+    @staticmethod
+    def _ajustar_alto(texto):
+        """Alto justo para el texto ya partido en renglones (depende del ancho de la ventana)."""
+        lineas = texto.count("1.0", "end", "displaylines")
+        alto = max(1, lineas[0] if lineas else 1)
+        if int(texto.cget("height")) != alto:
+            texto.configure(height=alto)
+
+    def _cambios(self, marco, filas):
+        if not filas:
+            ttk.Label(marco, text="Sin cambios.", style="TenueT.TLabel").pack(anchor="w")
+            return
+        for c, (titulo, ancho) in enumerate((("", 70), ("Hoja", 130), ("Día", 100), ("Docente", 400))):
+            tk.Label(marco, text=titulo, bg=TARJETA, fg=TENUE, font=(FUENTE, 9, "bold"), anchor="w", width=ancho // 8).grid(
+                row=0, column=c, sticky="w", padx=(0, 6))
+        for r, (signo, hoja, dia, nombre) in enumerate(filas, start=1):
+            entra = signo == "+"
+            tk.Label(marco, text="Entra" if entra else "Sale", bg=TARJETA, fg=VERDE if entra else ROJO,
+                     font=(FUENTE, 10, "bold"), anchor="w").grid(row=r, column=0, sticky="w", padx=(0, 6), pady=2)
+            for c, valor in enumerate((self.HOJAS[hoja], dia, nombre), start=1):
+                tk.Label(marco, text=valor, bg=TARJETA, fg=TEXTO, font=(FUENTE, 10, "bold" if c == 3 else "normal"),
+                         anchor="w").grid(row=r, column=c, sticky="w", padx=(0, 6), pady=2)
+
+    def _conteo(self, marco, filas):
+        for c, dia in enumerate([""] + NOMBRES_DIA):
+            tk.Label(marco, text=dia, bg=TARJETA, fg=TENUE, font=(FUENTE, 9, "bold"), width=14, anchor="w" if c == 0 else "center").grid(row=0, column=c)
+        for r, (hoja, numeros) in enumerate(filas, start=1):
+            tk.Label(marco, text=self.HOJAS.get(hoja, hoja), bg=TARJETA, fg=TEXTO, font=(FUENTE, 10), width=14, anchor="w").grid(row=r, column=0, pady=3)
+            for c, n in enumerate(numeros, start=1):
+                tk.Label(marco, text=str(n), bg=TARJETA, fg=INDIGO_OSCURO, font=(FUENTE, 14, "bold"), width=8).grid(row=r, column=c)
+
 
 class Lateral(tk.Frame):
     """Barra lateral índigo: ícono, nombre, menú, y abajo Salir y la versión (como Movimientos Docentes)."""

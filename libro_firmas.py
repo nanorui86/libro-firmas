@@ -55,6 +55,13 @@ def armar_listas(asignacion, maes):
     return listas
 
 
+def _que_hace(e):
+    """Frase corta de una excepción: 'sale del libro todos los días', 'va en tm lunes, martes'."""
+    dias = "todos los días" if len(e["dias"]) == 5 else ", ".join(e["dias"])
+    hasta = f" hasta {e['hasta']}" if e["hasta"] else ""
+    return (f"sale del libro {dias}" if e["turno"] == "quitar" else f"va en {e['turno']} {dias}") + hasta
+
+
 def _emparejar(previos, nuevos):
     """Empareja nombres que son la misma persona escrita distinto. Devuelve (solo_previos, solo_nuevos)."""
     libres = list(nuevos)
@@ -203,23 +210,16 @@ def generar(args):
         informe += [f"  {d}" for d in discrepancias]
         avisos_app += [("aviso", f"Tratamiento distinto en dos fuentes: {d}") for d in discrepancias]
 
-    informe.append(f"\nExcepciones: {len(vigentes)} vigentes, {len(vencidas)} vencidas, {len(futuras)} futuras")
-    informe += [
-        f"  vigente: {e['docente']} {e['turno']} {','.join(e['dias'])} | {e['motivo']} | "
-        f"desde {e['desde'] or '?'} hasta {e['hasta'] or 'sin fecha de fin'}"
-        for e in vigentes
-    ]
-    informe += [f"  SIN FECHA DE FIN: {e['docente']} {e['turno']}" for e in sin_fin]
+    informe.append(f"\nExcepciones manuales ({len(vigentes)} vigentes, {len(vencidas)} vencidas, {len(futuras)} futuras):")
+    informe += [f"  {e['docente']}: {_que_hace(e)}" + (f" · {e['motivo']}" if e["motivo"] else "") for e in vigentes]
     informe += [f"  VENCIDA (no se aplicó): {e['docente']} hasta {e['hasta']}" for e in vencidas]
 
-    informe.append(f"\nLicencias: {len(lic['vigentes'])} vigentes, {len(lic['vencidas'])} vencidas, {len(lic['futuras'])} futuras")
-    informe += [
-        f"  {l['docente']} | {l['motivo'] or 'sin motivo'} | desde {l['desde'] or '?'} hasta {l['hasta'] or 'sin fecha de fin'}"
-        f" | {'en la lista' if l['en_lista'] else 'fuera de la lista'}"
-        for l in lic["vigentes"]
-    ]
-    informe += notas_licencias
-    informe += [f"  SIN FECHA DE FIN: {l['docente']}" for l in lic["sin_fin"]]
+    informe.append(f"\nLicencias ({len(lic['vigentes'])} vigentes, {len(lic['vencidas'])} vencidas, {len(lic['futuras'])} futuras):")
+    for l in lic["vigentes"]:
+        nota = next((n.strip() for n in notas_licencias if n.strip().startswith(l["docente"] + ":")), l["docente"])
+        fechas = f"desde {l['desde']}" if l["desde"] else "sin fecha de inicio"
+        fechas += f" hasta {l['hasta']}" if l["hasta"] else ", sin fecha de fin"
+        informe.append(f"  {nota} · {l['motivo'] or 'sin motivo'} · {fechas}")
     avisos_app += [("info", f"{l['docente']}: la licencia no tiene fecha de fin.") for l in lic["sin_fin"]]
     for l in lic["vencidas"]:
         tiene_clases = any(d.ocupadas and maestro.misma_persona(l["docente"], d.nombre) for d in docentes)
