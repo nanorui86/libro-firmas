@@ -63,6 +63,10 @@ y licencias y llena el molde de Excel. 40 tests (`python -m unittest discover -s
 - Las "horas" de la cabecera pueden superar los módulos (clases simultáneas u horas fuera de grilla): aviso, no error.
 
 **Pendiente**
+- **Para el 2026-10-29 (pedido del usuario):** (1) revisar el formato de salida del Excel: "hay cosas que no se ven bien" (sin detallar;
+  pedirle que muestre cuáles: mirar el `.xlsx` generado y su vista de impresión); (2) volver a poner una barra de progreso junto al
+  contador de segundos al armar el libro (el usuario primero pidió contador en vez de barra, ahora quiere las dos; la barra puede ser
+  determinada según el tiempo estimado de ~18 s).
 - Que el usuario pruebe la app (doble clic en el acceso directo) y diga qué le falta.
 - Completar `desde`/`hasta` de las licencias (hoy "sin fecha de fin"; el informe lo recuerda).
 - Prueba física: imprimir una hoja y apoyarla sobre el libro real.
