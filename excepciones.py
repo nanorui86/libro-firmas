@@ -39,7 +39,7 @@ def cargar(ruta, hoy):
                 vencidas.append(fila)
             else:
                 vigentes.append(fila)
-                if not fila["hasta"]:
+                if not fila["hasta"] and fila["turno"] != "quitar":  # quitar sin fin = exclusión permanente
                     sin_fin.append(fila)
     return vigentes, vencidas, futuras, sin_fin
 

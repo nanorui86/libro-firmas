@@ -15,6 +15,7 @@ from datetime import date
 import pdfplumber
 
 import excepciones
+import horarios_manuales
 import maestro
 import parse_horario
 import render_libro
@@ -91,6 +92,7 @@ def main(argv=None):
     ap.add_argument("--maestro", default="datos/docentes.csv")
     ap.add_argument("--mdb", default="datos/mdb_tratamiento.csv")
     ap.add_argument("--excepciones", default="datos/excepciones.csv")
+    ap.add_argument("--manuales", default="datos/horarios_manuales.csv", help="horarios transcriptos a mano (escaneos)")
     ap.add_argument("--salida", default="salida")
     ap.add_argument("--fecha", help="fecha de referencia AAAA-MM-DD (por defecto, hoy)")
     args = ap.parse_args(argv)
@@ -120,18 +122,28 @@ def main(argv=None):
     else:
         informe.append("\nValidación cruzada: NO se hizo (falta --cursos)")
 
+    if os.path.exists(args.manuales):
+        manuales = horarios_manuales.cargar(args.manuales)
+        repetidos = [m.nombre for m in manuales if any(maestro.misma_persona(m.nombre, d.nombre) for d in docentes)]
+        detener += [f"{n}: figura en el PDF y en {args.manuales}; dejarlo en un solo lugar" for n in repetidos]
+        informe.append(f"\nHorarios transcriptos a mano ({len(manuales)} docentes, de un PDF escaneado; revisar contra el original):")
+        informe += [f"  {m.nombre}: {len(m.ocupadas)} módulos" for m in manuales]
+        docentes += manuales
+
     vigentes, vencidas, futuras, sin_fin = excepciones.cargar(args.excepciones, hoy)
     nombres = [d.nombre for d in docentes] + [e["docente"] for e in vigentes]
     maes, sin_trat, discrepancias = maestro.completar_maestro(
         list(dict.fromkeys(nombres)), args.maestro, args.mdb, args.plantilla
     )
+    asignacion = excepciones.aplicar(asignar(docentes), vigentes)
+    en_libro = {clave for clave, _ in asignacion}
+    sin_trat = [n for n in sin_trat if clave_docente(n) in en_libro]  # a quien no va en el libro no se le exige
     if sin_trat:
         detener.append(f"falta el tratamiento (Profesor/Profesora) de: {', '.join(sin_trat)} - completarlo en {args.maestro}")
     if discrepancias:
         informe.append("\nDiscrepancias de tratamiento (se usó el .mdb):")
         informe += [f"  {d}" for d in discrepancias]
 
-    asignacion = excepciones.aplicar(asignar(docentes), vigentes)
     informe.append(f"\nExcepciones: {len(vigentes)} vigentes, {len(vencidas)} vencidas, {len(futuras)} futuras")
     informe += [f"  vigente: {e['docente']} {e['turno']} {','.join(e['dias'])} ({e['motivo']})" for e in vigentes]
     informe += [f"  SIN FECHA DE FIN: {e['docente']} {e['turno']}" for e in sin_fin]

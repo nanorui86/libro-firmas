@@ -26,8 +26,24 @@ aplica excepciones y llena el molde de Excel. 26 tests (`python -m unittest disc
 - Las "horas" de la cabecera pueden superar los módulos (clases simultáneas u horas fuera de grilla): es aviso, no error.
 
 **Pendiente**
-- Tratamiento de un docente sin dato en ninguna fuente (ayudante en el `.mdb`).
-- Tres discrepancias de género entre el `.mdb` y el libro actual (el informe las lista).
-- Completar `hasta` y `motivo` de las excepciones sembradas.
+- **Horario de inglés: cargado** (`entrada\Horarios profs ingles.pdf`, 8 páginas). Es un ESCANEO con diseños distintos,
+  sin texto: no se lee por coordenadas. Se transcribió a mano a `datos\horarios_manuales.csv` (ocho docentes) y el resultado
+  coincide día por día con el libro actual. Cada hoja dice "Horario INGLÉS 2025": confirmar que está vigente.
+  Las celdas "PLANIFICACIÓN" (viernes, módulo 7) se cuentan como presencia; no cambió ningún resultado.
+- **Faltan dos docentes del libro actual que no están en ningún horario:** uno en licencia y otra que no figura en el PDF de
+  Untis ni en el de inglés (confirmar con el usuario).
+- **Licencias:** los docentes de licencia no firman pero el libro lleva la leyenda "licencia". Falta definir dónde se imprime
+  la leyenda (celda de tratamiento / junto al nombre) y cargar a los de licencia como excepciones con esa leyenda.
+- Completar `hasta` y `motivo` de las excepciones sembradas (dos docentes de licencia/suplente).
 - Prueba física: imprimir una hoja y apoyarla sobre el libro real.
-- Backup público en GitHub (cuenta del usuario), previo barrido de nombres.
+- Backup público: github.com/nanorui86/libro-firmas. Los cambios nuevos se suben cuando el usuario lo autorice.
+
+**Resuelto con el usuario (2026-10-28)**
+- El ayudante de laboratorio aparece en el PDF por reemplazos, pero va solo en `prec. 2026`: excluido del libro de docentes
+  con una excepción `quitar` permanente (no se le exige tratamiento a quien no va en el libro).
+- Tratamientos confirmados: los tres que discrepaban entre `.mdb` y libro son Profesora (el `.mdb` tenía mal uno).
+
+**Entorno**
+- `pdfplumber` global estaba roto (falta `charset_normalizer`): se usa `.venv\` del proyecto (pdfplumber + openpyxl). No hay `pytest`: tests con `unittest`.
+- Commits de este repo con el correo `noreply` de GitHub (config local), porque la cuenta bloquea pushes que exponen el correo personal.
+- `salida/Lib. Firmas 2026 (horario 2026-10-16).xlsx` es de PRUEBA: ya NO es de prueba respecto de tratamientos, pero está incompleto hasta cargar el horario de inglés.

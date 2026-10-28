@@ -9,6 +9,7 @@ import openpyxl
 from openpyxl.styles import Alignment, Border, Side
 
 import excepciones
+import horarios_manuales
 import libro_firmas
 import maestro
 import parse_horario
@@ -77,12 +78,13 @@ class TestExcepciones(unittest.TestCase):
                 self._fila(docente="Venc, Uno", hasta="2026-10-01"),
                 self._fila(docente="Fut, Dos", desde="2026-12-01"),
                 self._fila(docente="Fin, Tres", hasta="2026-11-30"),
+                self._fila(docente="Quita, Cuatro", turno="quitar"),
             ])
             vig, venc, fut, sin_fin = excepciones.cargar(ruta, date(2026, 10, 28))
-            self.assertEqual([e["docente"] for e in vig], ["Perez, Ana", "Fin, Tres"])
+            self.assertEqual([e["docente"] for e in vig], ["Perez, Ana", "Fin, Tres", "Quita, Cuatro"])
             self.assertEqual([e["docente"] for e in venc], ["Venc, Uno"])
             self.assertEqual([e["docente"] for e in fut], ["Fut, Dos"])
-            self.assertEqual([e["docente"] for e in sin_fin], ["Perez, Ana"])
+            self.assertEqual([e["docente"] for e in sin_fin], ["Perez, Ana"])  # quitar sin fin es permanente
 
     def test_aplicar_agrega_cambia_y_quita(self):
         asign = {("perez ana", 0): "tmyt", ("gomez beto", 1): "tm"}
@@ -96,6 +98,32 @@ class TestExcepciones(unittest.TestCase):
             ruta = self._archivo(d, [self._fila(dias="sabado")])
             with self.assertRaises(ValueError):
                 excepciones.cargar(ruta, date(2026, 10, 28))
+
+
+ENCABEZADO = "docente;dia;modulos\n"
+
+
+class TestHorariosManuales(unittest.TestCase):
+    def _cargar(self, texto):
+        with tempfile.TemporaryDirectory() as d:
+            ruta = os.path.join(d, "m.csv")
+            open(ruta, "w", encoding="utf-8").write(texto)
+            return horarios_manuales.cargar(ruta)
+
+    def test_rangos_y_listas(self):
+        self.assertEqual(horarios_manuales.parsear_modulos("1-3,5,8-9"), {1, 2, 3, 5, 8, 9})
+
+    def test_agrupa_dias_por_docente(self):
+        docs = self._cargar(ENCABEZADO + "Vega, Eva;lunes;1-2\nVega, Eva;viernes;8\nRoca, Ian;martes;7\n")
+        por_nombre = {d.nombre: d.ocupadas for d in docs}
+        self.assertEqual(por_nombre["Vega, Eva"], {(0, 1), (0, 2), (4, 8)})
+        self.assertEqual(por_nombre["Roca, Ian"], {(1, 7)})
+        self.assertEqual(libro_firmas.asignar(docs)[("vega eva", 4)], "tmyt")  # solo tarde => tmyt
+
+    def test_invalidos_fallan_con_la_linea(self):
+        for fila in ("A, B;sabado;1\n", "A, B;lunes;14\n", "A, B;lunes;\n"):
+            with self.assertRaises(ValueError):
+                self._cargar(ENCABEZADO + fila)
 
 
 class TestAsignacionYListas(unittest.TestCase):

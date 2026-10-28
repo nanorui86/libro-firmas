@@ -39,6 +39,8 @@ Necesita, en `datos/` (todo local, ignorado por git):
   (cinco bloques Lunes-Viernes de 4 columnas: N°, nombre, tratamiento, firma).
 - `mdb_tratamiento.csv`: se genera con `exportar_mdb.ps1` (solo apellido, nombre y cargo).
 - `docentes.csv` (se completa solo) y `excepciones.csv` (a mano; ver `excepciones.py`).
+- `horarios_manuales.csv` (opcional): horarios de docentes que vienen en un PDF escaneado o una foto y no se
+  pueden leer por coordenadas. Se transcriben una vez y se revisan a ojo (formato en `horarios_manuales.py`).
 
 Si falta el tratamiento (Profesor/Profesora) de un docente, **no se genera el libro**: no se adivina por el nombre.
 
