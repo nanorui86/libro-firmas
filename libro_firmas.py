@@ -145,7 +145,11 @@ def main(argv=None):
         informe += [f"  {d}" for d in discrepancias]
 
     informe.append(f"\nExcepciones: {len(vigentes)} vigentes, {len(vencidas)} vencidas, {len(futuras)} futuras")
-    informe += [f"  vigente: {e['docente']} {e['turno']} {','.join(e['dias'])} ({e['motivo']})" for e in vigentes]
+    informe += [
+        f"  vigente: {e['docente']} {e['turno']} {','.join(e['dias'])} | {e['motivo']} | "
+        f"desde {e['desde'] or '?'} hasta {e['hasta'] or 'sin fecha de fin'}"
+        for e in vigentes
+    ]
     informe += [f"  SIN FECHA DE FIN: {e['docente']} {e['turno']}" for e in sin_fin]
     informe += [f"  VENCIDA (no se aplicó): {e['docente']} hasta {e['hasta']}" for e in vencidas]
 
@@ -162,7 +166,8 @@ def main(argv=None):
 
     if os.path.exists(args.plantilla):
         antes = render_libro.leer_listas(args.plantilla)
-        ausentes = ausentes_del_pdf(antes, [d.nombre for d in docentes])
+        ausentes = [n for n in ausentes_del_pdf(antes, [d.nombre for d in docentes])
+                    if not any(maestro.misma_persona(n, e["docente"]) for e in vigentes)]  # los explicados ya figuran arriba
         informe.append(f"\nEstán en el libro actual y NO en el PDF de horarios ({len(ausentes)}):")
         informe += [f"  {n}" for n in ausentes] or ["  ninguno"]
         informe.append("\nDiferencias contra el libro actual, con los nombres parecidos ya emparejados (+ se agrega, - sale):")
