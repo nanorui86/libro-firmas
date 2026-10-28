@@ -16,9 +16,11 @@ import pdfplumber
 
 import excepciones
 import horarios_manuales
+import licencias
 import maestro
 import parse_horario
 import render_libro
+import turnos_previos
 import validar
 from clasificar import DIAS, clasificar, clave_docente
 
@@ -93,6 +95,8 @@ def main(argv=None):
     ap.add_argument("--mdb", default="datos/mdb_tratamiento.csv")
     ap.add_argument("--excepciones", default="datos/excepciones.csv")
     ap.add_argument("--manuales", default="datos/horarios_manuales.csv", help="horarios transcriptos a mano (escaneos)")
+    ap.add_argument("--licencias", default="datos/licencias.csv", help="registro de licencias (desde, hasta, motivo)")
+    ap.add_argument("--turnos-previos", default="datos/turnos_ultimo_libro.csv", help="memoria del último libro generado")
     ap.add_argument("--salida", default="salida")
     ap.add_argument("--fecha", help="fecha de referencia AAAA-MM-DD (por defecto, hoy)")
     args = ap.parse_args(argv)
@@ -131,11 +135,25 @@ def main(argv=None):
         docentes += manuales
 
     vigentes, vencidas, futuras, sin_fin = excepciones.cargar(args.excepciones, hoy)
-    nombres = [d.nombre for d in docentes] + [e["docente"] for e in vigentes]
+    lic = licencias.cargar(args.licencias, hoy)
+    for l in lic["vigentes"]:  # si el docente está en el horario con otra ortografía, se usa esa
+        existente = next((d.nombre for d in docentes if maestro.misma_persona(l["docente"], d.nombre)), None)
+        if existente:
+            l["docente"], l["clave"] = existente, clave_docente(existente)
+    nombres = ([d.nombre for d in docentes] + [e["docente"] for e in vigentes]
+               + [l["docente"] for l in lic["vigentes"] if l["en_lista"]])
     maes, sin_trat, discrepancias = maestro.completar_maestro(
         list(dict.fromkeys(nombres)), args.maestro, args.mdb, args.plantilla
     )
     asignacion = excepciones.aplicar(asignar(docentes), vigentes)
+    fuentes_previas = [("el último libro generado", turnos_previos.cargar(args.turnos_previos))]
+    if os.path.exists(args.plantilla):
+        fuentes_previas.append(("el libro actual", turnos_previos.desde_listas(render_libro.leer_listas(args.plantilla))))
+    notas_licencias, sin_datos = licencias.aplicar(
+        asignacion, lic["vigentes"], lambda nombre: turnos_previos.buscar(nombre, *fuentes_previas)
+    )
+    detener += [f"{n}: licencia vigente, pero no se sabe en qué turnos figuraba; cargarlo a mano en excepciones.csv"
+                for n in sin_datos]
     en_libro = {clave for clave, _ in asignacion}
     sin_trat = [n for n in sin_trat if clave_docente(n) in en_libro]  # a quien no va en el libro no se le exige
     if sin_trat:
@@ -153,10 +171,28 @@ def main(argv=None):
     informe += [f"  SIN FECHA DE FIN: {e['docente']} {e['turno']}" for e in sin_fin]
     informe += [f"  VENCIDA (no se aplicó): {e['docente']} hasta {e['hasta']}" for e in vencidas]
 
+    informe.append(f"\nLicencias: {len(lic['vigentes'])} vigentes, {len(lic['vencidas'])} vencidas, {len(lic['futuras'])} futuras")
+    informe += [
+        f"  {l['docente']} | {l['motivo'] or 'sin motivo'} | desde {l['desde'] or '?'} hasta {l['hasta'] or 'sin fecha de fin'}"
+        f" | {'en la lista' if l['en_lista'] else 'fuera de la lista'}"
+        for l in lic["vigentes"]
+    ]
+    informe += notas_licencias
+    informe += [f"  SIN FECHA DE FIN: {l['docente']}" for l in lic["sin_fin"]]
+    for l in lic["vencidas"]:
+        tiene_clases = any(d.ocupadas and maestro.misma_persona(l["docente"], d.nombre) for d in docentes)
+        informe.append(
+            f"  VENCIDA (ya no tiene efecto): {l['docente']} hasta {l['hasta']} - "
+            + ("tiene clases en el horario: figura como cualquier docente" if tiene_clases
+               else "NO tiene clases en el horario: ya NO figura en el libro (¿volvió? ¿se extiende la licencia?)")
+        )
+    informe += [f"  FUTURA (todavía no tiene efecto): {l['docente']} desde {l['desde']}" for l in lic["futuras"]]
+
+    en_licencia = lambda nombre: any(maestro.misma_persona(nombre, l["docente"]) for l in lic["vigentes"])  # noqa: E731
     sin_horas = [d.nombre for d in docentes if not d.ocupadas
-                 and not any(clave_docente(d.nombre) == e["clave"] for e in vigentes)]
+                 and not any(clave_docente(d.nombre) == e["clave"] for e in vigentes) and not en_licencia(d.nombre)]
     if sin_horas:
-        informe.append("\nDocentes en el PDF sin ninguna clase y sin excepción (no figuran en el libro):")
+        informe.append("\nDocentes en el PDF sin ninguna clase, sin excepción y sin licencia (no figuran en el libro):")
         informe += [f"  {n}" for n in sin_horas]
 
     listas = armar_listas(asignacion, maes)
@@ -167,7 +203,7 @@ def main(argv=None):
     if os.path.exists(args.plantilla):
         antes = render_libro.leer_listas(args.plantilla)
         ausentes = [n for n in ausentes_del_pdf(antes, [d.nombre for d in docentes])
-                    if not any(maestro.misma_persona(n, e["docente"]) for e in vigentes)]  # los explicados ya figuran arriba
+                    if not any(maestro.misma_persona(n, e["docente"]) for e in vigentes) and not en_licencia(n)]  # los explicados ya figuran arriba
         informe.append(f"\nEstán en el libro actual y NO en el PDF de horarios ({len(ausentes)}):")
         informe += [f"  {n}" for n in ausentes] or ["  ninguno"]
         informe.append("\nDiferencias contra el libro actual, con los nombres parecidos ya emparejados (+ se agrega, - sale):")
@@ -183,6 +219,7 @@ def main(argv=None):
 
     nombre = f"Lib. Firmas 2026 (horario {vigencia or hoy.isoformat()}).xlsx"
     render_libro.render(args.plantilla, os.path.join(args.salida, nombre), listas)
+    turnos_previos.guardar(listas, args.turnos_previos)  # para que las licencias recuerden los turnos de siempre
     informe.append(f"\nGenerado: {os.path.join(args.salida, nombre)}")
     open(ruta_informe, "w", encoding="utf-8").write("\n".join(informe) + "\n")
     print("\n".join(informe))

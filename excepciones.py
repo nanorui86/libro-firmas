@@ -1,4 +1,5 @@
-"""Excepciones manuales al horario: licencias, suplentes, cargos que Untis no carga.
+"""Excepciones manuales al horario: agregar o quitar a alguien en ciertos días (cargos que Untis no carga,
+quien va en otra planilla). Las licencias NO van acá: tienen su propio manejo en `licencias.py`.
 
 `excepciones.csv` (no se versiona) tiene una fila por docente y turno:
     docente;dias;turno;desde;hasta;motivo

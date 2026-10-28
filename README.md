@@ -19,7 +19,11 @@ Un mismo docente puede estar en `tm` un día y en `tmyt` otro.
    pegado a las horas en el texto plano.
 2. `validar.py` cruza con el PDF de cursos. Detecta docentes del horario que figuran en cursos sin clase, y
    docentes que el export de Untis dejó **sin página** (los reconstruye desde cursos y lo avisa).
-3. `clasificar.py` aplica la regla de turno. `excepciones.py` suma licencias y suplentes con fecha de vigencia.
+3. `clasificar.py` aplica la regla de turno. `licencias.py` maneja las licencias: el docente **sigue en la lista**
+   mientras dura la licencia (con `desde`, `hasta` y motivo), aunque el horario nuevo ya no lo traiga, y solo sale
+   si se marca `en_lista = no`. Para saber en qué turnos estaba usa `turnos_previos.py` (memoria del último libro
+   generado). `excepciones.py` queda para agregar o quitar a mano a alguien en ciertos días (por ejemplo, quien va
+   en otra planilla).
 4. `render_libro.py` llena un molde de Excel sin tocar zoom, márgenes ni alturas de fila (el renglón del libro
    físico), y fija los saltos de página.
 5. `libro_firmas.py` orquesta y escribe `informe.txt`: diferencias contra el libro actual, docentes sin clases,
@@ -38,7 +42,8 @@ Necesita, en `datos/` (todo local, ignorado por git):
 - `plantilla_libro.xlsx`: el libro de firmas convertido a `.xlsx`, con las hojas `prof. tm 2026` y `prof.tmyt.2026`
   (cinco bloques Lunes-Viernes de 4 columnas: N°, nombre, tratamiento, firma).
 - `mdb_tratamiento.csv`: se genera con `exportar_mdb.ps1` (solo apellido, nombre y cargo).
-- `docentes.csv` (se completa solo) y `excepciones.csv` (a mano; ver `excepciones.py`).
+- `docentes.csv` (se completa solo), `excepciones.csv` (a mano; ver `excepciones.py`) y `licencias.csv`
+  (a mano: `docente;desde;hasta;motivo;en_lista`; ver `licencias.py`). `turnos_ultimo_libro.csv` lo escribe el programa.
 - `horarios_manuales.csv` (opcional): horarios de docentes que vienen en un PDF escaneado o una foto y no se
   pueden leer por coordenadas. Se transcriben una vez y se revisan a ojo (formato en `horarios_manuales.py`).
 
