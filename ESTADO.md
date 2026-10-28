@@ -8,7 +8,9 @@ El usuario pidió una app para crear el listado sin pelearse con la línea de co
 - `libro_firmas.generar` ahora devuelve un `Resultado` (ok, informe, ruta, sin_tratamiento, problemas, conteo, avisos); `main` solo imprime.
 - Nuevo: `repositorio.py` (fechas dd/mm/aaaa <-> ISO, validación, estado de licencia) y `maestro.fijar_tratamiento`
   (la ventana pregunta Profesor/Profesora cuando falta). 57 tests.
-- Diseño: paleta del propio libro (papel, verde de las franjas, tinta); no se tocó la tipografía/paleta cálida vigente.
+- Diseño: el usuario no quiso la primera versión (verde/papel) y pidió el formato de Movimientos Docentes y Registro de Egresados:
+  barra lateral índigo (#3F51B5) con menú, fondo gris claro, tarjetas blancas, etiquetas de sección en mayúsculas, botones
+  contorneados y franja ámbar de aviso. Sigue siendo tkinter (imita Material; esas apps son WPF).
 - Probado con el horario real: 18 s, mismos conteos que antes (tm 25/22/19/20/30, tmyt 29/24/35/29/17).
 - Decisión: NO hay botón de impresión automática hasta la prueba física (se explica cómo imprimir y se abre Excel).
 - Dos docentes figuran con otro nombre en el libro anterior (ortografía distinta); la ventana lo avisa como "puede estar
