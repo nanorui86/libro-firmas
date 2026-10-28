@@ -1,5 +1,14 @@
 # Libro de firmas docente: estado
 
+## 2026-10-28 (noche): ajustes tras probar la app
+- Nombres: una inicial ("A.") ahora encaja con el nombre que empieza así, y la comparación de "figuraba en el libro anterior" usa
+  también el nombre tal como se imprime. Un docente cuyo nombre en Untis difiere del del libro (nombre compuesto) se arregla
+  corrigiendo la columna `impreso` de `datos/docentes.csv` (ahí se edita a mano).
+- Nueva pantalla **Excluidos** (filas `quitar` de `datos/excepciones.csv`, todos los días y sin fecha de fin): docentes que figuran
+  en Untis pero no van en el libro; el programa deja de avisar por ellos.
+- El informe completo explica cada sección con "Qué hacer" (las diferencias contra el libro son solo para controlar).
+- El armado muestra un contador de segundos en lugar de la barra.
+
 ## 2026-10-28 (tarde): app de escritorio
 El usuario pidió una app para crear el listado sin pelearse con la línea de comandos ni con la impresión. Hecha con tkinter
 (stdlib): `app.py` + lanzador `Libro de firmas.pyw` + acceso directo en el Escritorio (`pythonw.exe` del `.venv`).

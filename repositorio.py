@@ -8,6 +8,7 @@ import os
 from datetime import date
 
 from clasificar import DIAS
+import excepciones
 import horarios_manuales
 import licencias
 
@@ -150,3 +151,29 @@ def _leer_coma(ruta):
         return []
     with open(ruta, newline="", encoding="utf-8-sig") as f:
         return list(csv.DictReader(f))
+
+
+# ---------- excluidos (docentes que no van en el libro) ----------
+
+DIAS_TODOS = ",".join(DIAS)
+
+
+def _es_exclusion(fila):
+    return fila["turno"].strip() == "quitar" and fila["dias"].replace(" ", "") == DIAS_TODOS and not fila["hasta"].strip()
+
+
+def leer_excluidos(ruta):
+    """Docentes sacados del libro todos los días y sin fecha de fin: [{'docente', 'motivo'}]."""
+    return [{"docente": f["docente"].strip(), "motivo": f["motivo"].strip()} for f in _leer(ruta) if _es_exclusion(f)]
+
+
+def guardar_excluidos(ruta, filas):
+    """Reemplaza las exclusiones y deja intactas las demás excepciones del archivo."""
+    nuevas = []
+    for f in filas:
+        if not f["docente"].strip():
+            raise ValueError("Elegí el docente.")
+        nuevas.append({"docente": f["docente"].strip(), "dias": DIAS_TODOS, "turno": "quitar", "desde": "", "hasta": "",
+                       "motivo": f.get("motivo", "").strip()})
+    otras = [f for f in _leer(ruta) if not _es_exclusion(f)]
+    _escribir(ruta, excepciones.CAMPOS, otras + nuevas)

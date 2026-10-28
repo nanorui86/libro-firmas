@@ -148,7 +148,9 @@ def generar(args):
 
     if args.cursos:
         errores, avisos = validar.validar(docentes, args.cursos)
-        informe.append(f"\nValidación cruzada con cursos: {len(errores)} errores, {len(avisos)} avisos")
+        informe.append(f"\nControl contra el horario de cursos: {len(errores)} errores, {len(avisos)} avisos")
+        informe.append("  Qué hacer: nada, salvo que haya ERROR. Los avisos son diferencias entre los dos PDF de Untis "
+                       "(horas declaradas vs. módulos, celdas sin curso) y no cambian el libro.")
         informe += [f"  ERROR {e}" for e in errores] + [f"  aviso {a}" for a in avisos]
         detener += errores
         faltantes = validar.docentes_solo_en_cursos(docentes, args.cursos)
@@ -235,9 +237,11 @@ def generar(args):
     sin_horas = [d.nombre for d in docentes if not d.ocupadas
                  and not any(clave_docente(d.nombre) == e["clave"] for e in vigentes) and not en_licencia(d.nombre)]
     if sin_horas:
-        informe.append("\nDocentes en el PDF sin ninguna clase, sin excepción y sin licencia (no figuran en el libro):")
+        informe.append("\nDocentes en el PDF sin ninguna clase, sin licencia y sin estar excluidos (no figuran en el libro):")
+        informe.append("  Qué hacer: si ya no trabajan o van en otra planilla, agregalos en Excluidos para que no vuelvan a avisar.")
         informe += [f"  {n}" for n in sin_horas]
-        avisos_app += [("aviso", f"{n} está en el horario pero sin ninguna clase ni licencia: no sale en el libro.") for n in sin_horas]
+        avisos_app += [("aviso", f"{n} está en el horario pero sin ninguna clase ni licencia: no sale en el libro. "
+                                 "Si ya no trabaja, agregalo en Excluidos y deja de avisar.") for n in sin_horas]
 
     listas = armar_listas(asignacion, maes)
     informe.append("\nCantidad de docentes por hoja y día:")
@@ -246,14 +250,19 @@ def generar(args):
 
     if os.path.exists(args.plantilla):
         antes = render_libro.leer_listas(args.plantilla)
-        ausentes = [n for n in ausentes_del_pdf(antes, [d.nombre for d in docentes])
+        en_el_libro_nuevo = [n for turno in listas.values() for dia in turno for n, _ in dia]  # con el nombre tal como se imprime
+        ausentes = [n for n in ausentes_del_pdf(antes, [d.nombre for d in docentes] + en_el_libro_nuevo)
                     if not any(maestro.misma_persona(n, e["docente"]) for e in vigentes) and not en_licencia(n)]  # los explicados ya figuran arriba
-        informe.append(f"\nEstán en el libro actual y NO en el PDF de horarios ({len(ausentes)}):")
+        informe.append(f"\nEstán en el libro actual y NO en el horario nuevo ({len(ausentes)}):")
+        informe.append("  Qué hacer: si es alguien que ya no está, nada. Si sigue, puede estar escrito distinto en el libro;"
+                       " en ese caso corregí el nombre impreso en datos\\docentes.csv.")
         informe += [f"  {n}" for n in ausentes] or ["  ninguno"]
         avisos_app += [("aviso", f"{n} figuraba en el libro anterior y no aparece en el horario con ese nombre (puede estar "
                                  "escrito distinto). Si es otra persona o ya no está, no sale en el libro.")
                        for n in {clave_docente(n): n for n in ausentes}.values()]
-        informe.append("\nDiferencias contra el libro actual, con los nombres parecidos ya emparejados (+ se agrega, - sale):")
+        informe.append("\nQué cambia respecto del libro actual (+ entra en esa hoja y día, - sale):")
+        informe.append("  Qué hacer: nada. Es solo para controlar que los cambios tengan sentido (por ejemplo, que salga"
+                       " quien ya no tiene clases ese día). Los nombres escritos distinto ya están emparejados.")
         informe += diferencias(antes, listas) or ["  ninguna"]
 
     ruta_informe = os.path.join(args.salida, "informe.txt")

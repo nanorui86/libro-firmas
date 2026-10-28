@@ -8,6 +8,7 @@ import json
 import os
 import queue
 import threading
+import time
 import tkinter as tk
 from datetime import date
 from tkinter import filedialog, messagebox, ttk
@@ -22,6 +23,7 @@ RUTA_CONFIG = os.path.join(BASE, "datos", "app_config.json")
 RUTA_LICENCIAS = os.path.join(BASE, "datos", "licencias.csv")
 RUTA_MANUALES = os.path.join(BASE, "datos", "horarios_manuales.csv")
 RUTA_MAESTRO = os.path.join(BASE, "datos", "docentes.csv")
+RUTA_EXCEPCIONES = os.path.join(BASE, "datos", "excepciones.csv")
 VERSION = "Versión 1.0"
 
 # Colores y medidas de Movimientos Docentes / Registro de Egresados (Material Design, primario índigo).
@@ -350,6 +352,24 @@ def pantalla_manuales(padre):
     return pantalla
 
 
+def pantalla_excluidos(padre):
+    pantalla = Pantalla(padre, "Excluidos", "Docentes que no van en el libro aunque estén en el horario")
+    Aviso(pantalla, "Sirve para quien figura en el PDF de Untis pero no firma en este libro: ya no trabaja, o va en la "
+                    "planilla de preceptores (por ejemplo, el ayudante de laboratorio). Un docente excluido no sale en "
+                    "ningún día y el programa deja de avisar por él.", ancho=760).pack(fill="x", pady=(0, 12))
+    t = TablaEditable(
+        pantalla,
+        columnas=[("docente", "Docente", 300), ("motivo", "Motivo", 400)],
+        campos=[("docente", "Docente", None), ("motivo", "Motivo", None)],
+        leer=lambda: repositorio.leer_excluidos(RUTA_EXCEPCIONES),
+        guardar=lambda filas: repositorio.guardar_excluidos(RUTA_EXCEPCIONES, filas),
+        opciones=lambda: {"docente": repositorio.nombres_docentes(RUTA_MAESTRO)},
+        validar=lambda v: v)
+    t.ayuda_formulario = "Podés escribir el nombre como figura en Untis: Apellido, Nombre."
+    t.pack(fill="both", expand=True)
+    return pantalla
+
+
 # ---------- docentes por día ----------
 
 class Renglones(tk.Canvas):
@@ -403,7 +423,7 @@ class PantallaArmar(Pantalla):
         self.boton.pack(side="left")
         self.estado = ttk.Label(acciones, text="", style="TenueT.TLabel")
         self.estado.pack(side="left", padx=16)
-        self.barra = ttk.Progressbar(acciones, mode="indeterminate", length=140)
+        self.inicio = None
 
         t2 = Tarjeta(self, "Docentes por día")
         t2.pack(fill="x", pady=(0, 12))
@@ -478,12 +498,18 @@ class PantallaArmar(Pantalla):
         self.boton.configure(state="disabled")
         for b in (self.b_excel, self.b_carpeta, self.b_informe):
             b.configure(state="disabled")
-        self.estado.configure(text="Armando el libro… tarda unos 20 segundos.")
-        self.barra.pack(side="left")
-        self.barra.start(12)
+        self.inicio = time.monotonic()
+        self._contar()
         args = libro_firmas.opciones(profesores, base=BASE, cursos=cursos or None)
         threading.Thread(target=self._trabajo, args=(args,), daemon=True).start()
         self.after(150, self._esperar)
+
+    def _contar(self):
+        """Segundos transcurridos mientras se arma (tarda unos 20)."""
+        if self.inicio is None:
+            return
+        self.estado.configure(text=f"Armando el libro…  {int(time.monotonic() - self.inicio)} s   (tarda unos 20 segundos)")
+        self.after(250, self._contar)
 
     def _trabajo(self, args):
         try:
@@ -497,8 +523,7 @@ class PantallaArmar(Pantalla):
         except queue.Empty:
             self.after(150, self._esperar)
             return
-        self.barra.stop()
-        self.barra.pack_forget()
+        self.inicio = None
         self.boton.configure(state="normal")
         if tipo == "error":
             self.estado.configure(text="")
@@ -623,13 +648,15 @@ class App(tk.Tk):
         self.ruta_libro = None
         self.contenido = ttk.Frame(self)
         self.pantallas = {}
-        secciones = [("armar", "Armar libro", "▤"), ("licencias", "Licencias", "✎"), ("manuales", "Horarios a mano", "◷")]
+        secciones = [("armar", "Armar libro", "▤"), ("licencias", "Licencias", "✎"), ("manuales", "Horarios a mano", "◷"),
+                    ("excluidos", "Excluidos", "⊘")]
         self.lateral = Lateral(self, self, secciones)
         self.lateral.pack(side="left", fill="y")
         self.contenido.pack(side="left", fill="both", expand=True)
         for clave, fabrica in (("armar", lambda: PantallaArmar(self.contenido, self)),
                                ("licencias", lambda: pantalla_licencias(self.contenido)),
-                               ("manuales", lambda: pantalla_manuales(self.contenido))):
+                               ("manuales", lambda: pantalla_manuales(self.contenido)),
+                               ("excluidos", lambda: pantalla_excluidos(self.contenido))):
             self.pantallas[clave] = fabrica()  # cada pantalla se arma una vez; cambiar de sección solo cambia cuál se ve
         self.mostrar("armar")
 

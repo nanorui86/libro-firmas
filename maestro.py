@@ -81,7 +81,8 @@ def misma_persona(nombre_a, nombre_b):
 
 
 def _nombre_compatible(a, b):
-    return bool(a & b) or any(x.startswith(y) or y.startswith(x) for x in a for y in b if min(len(x), len(y)) >= 2)
+    """Comparten un nombre, o uno es prefijo del otro; una inicial sola ("A.") encaja con el nombre que empieza así."""
+    return bool(a & b) or any(x.startswith(y) or y.startswith(x) for x in a for y in b if min(len(x), len(y)) >= 1)
 
 
 def buscar_tratamiento(nombre, fuente):

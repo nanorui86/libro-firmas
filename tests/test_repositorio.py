@@ -114,3 +114,25 @@ class FijarTratamiento(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Excluidos(unittest.TestCase):
+    def test_guardar_conserva_otras_excepciones(self):
+        import excepciones
+        with tempfile.TemporaryDirectory() as d:
+            ruta = os.path.join(d, "excepciones.csv")
+            excepciones.escribir([{"docente": "Otro, Uno", "dias": "lunes", "turno": "tm", "desde": "", "hasta": "2026-12-01",
+                                   "motivo": "cubre"}], ruta)
+            repositorio.guardar_excluidos(ruta, [{"docente": "Perez, Ana", "motivo": "ya no está"}])
+            self.assertEqual(repositorio.leer_excluidos(ruta), [{"docente": "Perez, Ana", "motivo": "ya no está"}])
+            vigentes, *_ = excepciones.cargar(ruta, date(2026, 10, 28))
+            self.assertEqual({e["docente"] for e in vigentes}, {"Otro, Uno", "Perez, Ana"})
+            repositorio.guardar_excluidos(ruta, [])
+            self.assertEqual(len(excepciones.cargar(ruta, date(2026, 10, 28))[0]), 1)
+
+
+class Nombres(unittest.TestCase):
+    def test_inicial_y_nombre_compuesto(self):
+        self.assertTrue(maestro.misma_persona("PEREZ LIMA, A.", "Perez Lima, Ma. Alejandra"))
+        self.assertTrue(maestro.misma_persona("SOSA,  Cesar", "SOSA, Cesar Daniel"))
+        self.assertFalse(maestro.misma_persona("SOSA, Cesar", "SOSA, Mario"))
