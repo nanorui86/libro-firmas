@@ -6,8 +6,8 @@
   inferior. Por eso el último docente de esos días quedaba abierto. Ahora `render_libro` cierra todo renglón usado con línea media
   en N°, nombre y tratamiento (firma sin bordes). Probado con `tests/test_render_bordes.py` y con un barrido de todas las celdas
   del libro real (0 distintas) y una vista del PDF exportado con Excel.
-- Observación sin tocar: los rótulos de día de la fila 1 vienen desparejos del molde original ("lunes" en minúscula, "    Martes"
-  con espacios y centrado, alineaciones distintas). Ofrecer normalizarlos.
+- Rótulos de día de la fila 1 (venían desparejos del molde: "lunes", "    Martes", tamaños y alineaciones distintas): ahora
+  Lunes/Martes/Miércoles/Jueves/Viernes, Arial 12 negrita, alineados a la izquierda (`render_libro.ROTULOS`, con prueba).
 - La barra de progreso es continua y acompaña al contador; sigue el tiempo de la última vez (`duracion` en `datos/app_config.json`)
   y no llega al 100 % hasta que termina.
 

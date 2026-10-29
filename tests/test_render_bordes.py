@@ -61,5 +61,24 @@ class BordesUniformes(unittest.TestCase):
                     self.assertIsNone(_estilo(ws.cell(ultima + 1, c0 + k).border.bottom))
 
 
+class Rotulos(unittest.TestCase):
+    def test_rotulos_de_dia_parejos(self):
+        with tempfile.TemporaryDirectory() as d:
+            molde, salida = os.path.join(d, "m.xlsx"), os.path.join(d, "s.xlsx")
+            _molde(molde)
+            wb = openpyxl.load_workbook(molde)
+            for nombre in render_libro.HOJAS.values():
+                wb[nombre]["A1"], wb[nombre]["E1"] = "lunes", "    Martes"
+            wb.save(molde)
+            listas = {t: [[] for _ in range(5)] for t in render_libro.HOJAS}
+            render_libro.render(molde, salida, listas)
+            wb = openpyxl.load_workbook(salida)
+            for nombre in render_libro.HOJAS.values():
+                celdas = [wb[nombre].cell(1, c0) for c0 in render_libro.PRIMERA_COLUMNA]
+                self.assertEqual([c.value for c in celdas], ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"])
+                self.assertEqual({(c.font.sz, c.font.b, c.alignment.horizontal, c.alignment.vertical) for c in celdas},
+                                 {(12.0, True, "left", "center")})
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -8,7 +8,7 @@ la impresora.
 from copy import copy
 
 import openpyxl
-from openpyxl.styles import Alignment, Border, Side
+from openpyxl.styles import Alignment, Border, Font, Side
 from openpyxl.styles.cell_style import StyleArray
 from openpyxl.worksheet.pagebreak import Break
 
@@ -27,6 +27,10 @@ RENGLONES_PRIMERA_PAGINA = RENGLONES_POR_PAGINA - 1  # la fila 1 es el encabezad
 # columnas con datos (N°, nombre, tratamiento); la columna de firma queda libre.
 _LADO = Side(style="medium")
 _CAJA = Border(left=_LADO, right=_LADO, top=_LADO, bottom=_LADO)
+
+
+# Los rótulos de día del molde vienen desparejos ("lunes", "    Martes", tamaños y alineaciones distintas).
+ROTULOS = ("Lunes", "Martes", "Miércoles", "Jueves", "Viernes")
 
 
 class DesbordeError(ValueError):
@@ -89,6 +93,12 @@ def render(plantilla, salida, listas):
                     alineacion = copy(ws.cell(r, c0 + 1).alignment)
                     alineacion.wrap_text = True
                     ws.cell(r, c0 + 1).alignment = alineacion
+
+        for rotulo, c0 in zip(ROTULOS, PRIMERA_COLUMNA):
+            celda = ws.cell(1, c0)
+            celda.value = rotulo
+            celda.font = Font(name="Arial", size=12, bold=True)
+            celda.alignment = Alignment(horizontal="left", vertical="center")
 
         ws.row_breaks.brk = []
         ws.col_breaks.brk = []
