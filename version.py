@@ -2,4 +2,4 @@
 
 Formato mayor.menor.parche: mayor = cambia cómo se usa; menor = funciones nuevas; parche = arreglos.
 """
-VERSION = "1.6.0"
+VERSION = "1.6.1"

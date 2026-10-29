@@ -2,6 +2,10 @@
 
 Cada cambio sube la versión (`version.py`); la versión se ve abajo a la izquierda en la ventana.
 
+## 1.6.1 — 2026-10-29
+- Si la carpeta de datos compartida no abre desde una PC, el aviso dice el motivo exacto que da Windows y ofrece elegir la carpeta a
+  mano (se guarda en `config.txt` y el programa se reabre).
+
 ## 1.6.0 — 2026-10-29
 - Datos compartidos entre PC: `config.txt` (`Datos=carpeta de red`) hace que licencias, excluidos, docentes y horarios a mano se
   vean igual en todas las PC; si no hay red avisa y usa la copia local.

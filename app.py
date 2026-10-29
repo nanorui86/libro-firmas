@@ -8,6 +8,7 @@ import json
 import math
 import os
 import queue
+import subprocess
 import sys
 import threading
 import time
@@ -786,7 +787,25 @@ class App(tk.Tk):
             self.pantallas[clave] = fabrica()  # cada pantalla se arma una vez; cambiar de sección solo cambia cuál se ve
         self.mostrar("armar")
         if rutas.AVISO:
-            self.after(300, lambda: messagebox.showwarning("Datos compartidos", rutas.AVISO, parent=self))
+            self.after(300, self._problema_con_los_datos)
+
+    def _problema_con_los_datos(self):
+        """La carpeta compartida no abre desde esta PC: se muestra el motivo y se ofrece elegir la carpeta a mano."""
+        if not messagebox.askyesno("Datos compartidos", rutas.AVISO + "\n\n¿Querés elegir la carpeta de datos a mano "
+                                   "(por ejemplo, la unidad de red que usás en esta PC)?", parent=self):
+            return
+        carpeta = filedialog.askdirectory(parent=self, title="Elegí la carpeta \"Libro de firmas (datos)\"", mustexist=True)
+        if not carpeta:
+            return
+        carpeta = os.path.normpath(carpeta)
+        if not os.path.isfile(os.path.join(carpeta, "docentes.csv")):
+            messagebox.showwarning("Carpeta equivocada", "Esa carpeta no tiene los datos (falta docentes.csv). "
+                                   "Elegí la carpeta \"Libro de firmas (datos)\".", parent=self)
+            return
+        rutas.fijar_carpeta_datos(carpeta)
+        messagebox.showinfo("Listo", "Se guardó la carpeta. El programa se abre de nuevo.", parent=self)
+        subprocess.Popen([sys.executable] + ([] if getattr(sys, "frozen", False) else [os.path.join(BASE, "lanzador.py")]))
+        self.destroy()
 
     def mostrar(self, clave):
         for p in self.pantallas.values():

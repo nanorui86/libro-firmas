@@ -42,3 +42,22 @@ class Resolver(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Motivo(unittest.TestCase):
+    def test_carpeta_que_existe_no_tiene_motivo(self):
+        with tempfile.TemporaryDirectory() as d:
+            self.assertEqual(rutas.motivo(d), "")
+
+    def test_carpeta_que_no_existe_da_el_motivo(self):
+        with tempfile.TemporaryDirectory() as d:
+            self.assertIn("código", rutas.motivo(os.path.join(d, "no_hay")))
+
+    def test_fijar_carpeta_conserva_otras_lineas(self):
+        with tempfile.TemporaryDirectory() as d:
+            ruta = os.path.join(d, "config.txt")
+            with open(ruta, "w", encoding="utf-8") as f:
+                f.write("Otra=1\nDatos=" + r"\\viejo\carpeta" + "\n")
+            nueva = r"Z:\datos con tilde í"
+            rutas.fijar_carpeta_datos(nueva, ruta)
+            self.assertEqual(rutas.leer_config_txt(ruta), {"Otra": "1", "Datos": nueva})

@@ -1,12 +1,23 @@
 # Libro de firmas docente: estado
 
+## 2026-10-29 (noche, 2): v1.6.1, carpeta compartida inaccesible en la PC de una compañera
+- Síntoma: al abrir en otra PC, cartel "Datos compartidos: no se pudo abrir la carpeta..." (y un aviso parecido al instalar), aunque
+  esa persona sí abre la carpeta desde el Explorador. Causa no confirmada (pudo ser otro nombre/unidad de red, credenciales o
+  resolución de nombre en esa PC). La carpeta de la red existe y tiene los 7 archivos (la creó un instalador el 29/10 a la mañana).
+- Cambio: el aviso ahora dice el motivo exacto de Windows (p. ej. "código 53" = ruta de red no encontrada, "código 5" = acceso
+  denegado) y ofrece elegir la carpeta a mano (se guarda en `config.txt` y el programa se reabre). Pendiente: que el usuario pruebe
+  1.6.1 en esa PC y pase el motivo si sigue sin abrir.
+- Ojo al escribir código con heredocs de bash: se comen las barras invertidas y meten saltos reales en los strings (rompió `rutas.py`,
+  `app.py` y un test); editar con la herramienta Edit.
+
 ## 2026-10-29 (noche): datos compartidos e instalador (v1.6.0)
 - El usuario no quiere copiar `datos\` a mano en cada cambio y dijo que en esta PC hay Inno Setup. Se hizo `rutas.py` + `config.txt`
   (`Datos=carpeta de red`): licencias, excluidos, docentes y horarios a mano se leen y se guardan ahí; `app_config.json` (PDF
   elegidos, duración) queda por PC junto al programa. Sin red: avisa y usa la copia local si existe.
 - Instalador `instalador\LibroFirmas.iss` (como el de Registro de Egresados: `C:\LibroFirmas`, sin admin, config.txt solo si falta,
   datos a la red solo si no existen y sin borrarlos al desinstalar). Carpeta de datos elegida: `...\Docentes\Lista Personal y
-  Premio Asistencia\Libro de firmas (datos)` (junto al `Lib. Firmas.xls`; en `datosuta_red.txt`, no versionada).
+  Premio Asistencia\Libro de firmas (datos)` (junto al `Lib. Firmas.xls`; en `datos
+uta_red.txt`, no versionada).
 - Probado instalando en silencio en una carpeta temporal con una "red" temporal: copia los datos, un cambio en el archivo
   compartido se refleja al armar, la ventana abre, desinstalar deja los datos. NO se instaló nada en la PC real ni se creó la carpeta
   de la red: la crea el primer instalador que se ejecute. Hay ícono propio (`recursospp.ico`).
