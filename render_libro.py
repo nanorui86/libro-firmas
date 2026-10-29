@@ -8,7 +8,7 @@ la impresora.
 from copy import copy
 
 import openpyxl
-from openpyxl.styles import Alignment
+from openpyxl.styles import Alignment, Border, Side
 from openpyxl.styles.cell_style import StyleArray
 from openpyxl.worksheet.pagebreak import Break
 
@@ -20,6 +20,13 @@ RENGLONES_POR_PAGINA = 24
 SALTOS_COLUMNA = {"tm": (8, 16, 22), "tmyt": (8, 16)}
 PAGINAS_FILAS = {"tm": 1, "tmyt": 2}
 RENGLONES_PRIMERA_PAGINA = RENGLONES_POR_PAGINA - 1  # la fila 1 es el encabezado del día
+
+
+# El molde dibuja los bordes celda por celda y a mano: en la fila que se copia, los martes (y los jueves de
+# mañana y tarde) tienen líneas finas o abiertas. Todo renglón usado se cierra igual: línea media en las tres
+# columnas con datos (N°, nombre, tratamiento); la columna de firma queda libre.
+_LADO = Side(style="medium")
+_CAJA = Border(left=_LADO, right=_LADO, top=_LADO, bottom=_LADO)
 
 
 class DesbordeError(ValueError):
@@ -72,6 +79,8 @@ def render(plantilla, salida, listas):
                     celda = ws.cell(r, c0 + k)
                     celda.value = None
                     celda._style = copy(molde[k]) if usada else StyleArray()
+                    if usada:
+                        celda.border = copy(_CAJA) if k < 3 else Border()
                 if usada:
                     ws.cell(r, c0).value = n + 1
                 if n < len(filas):

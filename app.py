@@ -5,6 +5,7 @@ con el menú, fondo gris claro y tarjetas blancas. Tiene tres pantallas: Armar l
 Toda la lógica vive en los otros módulos (`libro_firmas.generar`, `repositorio`); acá solo hay pantalla.
 """
 import json
+import math
 import os
 import queue
 import threading
@@ -26,6 +27,7 @@ RUTA_MANUALES = os.path.join(BASE, "datos", "horarios_manuales.csv")
 RUTA_MAESTRO = os.path.join(BASE, "datos", "docentes.csv")
 RUTA_EXCEPCIONES = os.path.join(BASE, "datos", "excepciones.csv")
 VERSION = "Versión 1.0"
+DURACION_INICIAL = 18.0  # segundos que tarda armar el libro; después se aprende de la última vez
 
 # Colores y medidas de Movimientos Docentes / Registro de Egresados (Material Design, primario índigo).
 INDIGO, INDIGO_OSCURO, INDIGO_SUAVE = "#3F51B5", "#283593", "#E8EAF6"
@@ -426,7 +428,8 @@ class PantallaArmar(Pantalla):
         self.boton.pack(side="left")
         self.estado = ttk.Label(acciones, text="", style="TenueT.TLabel")
         self.estado.pack(side="left", padx=16)
-        self.inicio = None
+        self.barra = ttk.Progressbar(acciones, mode="determinate", maximum=100, length=220)
+        self.inicio, self.duracion_estimada = None, DURACION_INICIAL
 
         t2 = Tarjeta(self, "Docentes por día")
         t2.pack(fill="x", pady=(0, 12))
@@ -497,22 +500,31 @@ class PantallaArmar(Pantalla):
             messagebox.showwarning("No encuentro el PDF de cursos",
                                    "Elegí otro PDF de cursos o tocá Borrar para armar sin él.", parent=self)
             return
-        guardar_config({"profesores": profesores, "cursos": cursos})
+        config = leer_config()
+        guardar_config({**config, "profesores": profesores, "cursos": cursos})
+        self.duracion_estimada = float(config.get("duracion", DURACION_INICIAL))
         self.boton.configure(state="disabled")
         for b in (self.b_excel, self.b_carpeta, self.b_informe):
             b.configure(state="disabled")
         self.inicio = time.monotonic()
+        self.barra.configure(value=0)
+        self.barra.pack(side="left", padx=(16, 0), after=self.boton)
         self._contar()
         args = libro_firmas.opciones(profesores, base=BASE, cursos=cursos or None)
         threading.Thread(target=self._trabajo, args=(args,), daemon=True).start()
         self.after(150, self._esperar)
 
     def _contar(self):
-        """Segundos transcurridos mientras se arma (tarda unos 20)."""
+        """Segundos transcurridos y barra que avanza de corrido mientras se arma.
+
+        No hay una medida real del avance, así que la barra sigue el tiempo que tardó la vez anterior: sube rápido
+        al principio, se frena cerca del final y nunca llega al 100 % hasta que termina de verdad."""
         if self.inicio is None:
             return
-        self.estado.configure(text=f"Armando el libro…  {int(time.monotonic() - self.inicio)} s   (tarda unos 20 segundos)")
-        self.after(250, self._contar)
+        transcurrido = time.monotonic() - self.inicio
+        self.barra.configure(value=97 * (1 - math.exp(-2.0 * transcurrido / self.duracion_estimada)))
+        self.estado.configure(text=f"Armando el libro…  {int(transcurrido)} s   (tarda unos {round(self.duracion_estimada)} segundos)")
+        self.after(100, self._contar)
 
     def _trabajo(self, args):
         try:
@@ -526,7 +538,11 @@ class PantallaArmar(Pantalla):
         except queue.Empty:
             self.after(150, self._esperar)
             return
+        if tipo == "ok":
+            guardar_config({**leer_config(), "duracion": round(time.monotonic() - self.inicio, 1)})
         self.inicio = None
+        self.barra.configure(value=100)
+        self.after(500, self.barra.pack_forget)
         self.boton.configure(state="normal")
         if tipo == "error":
             self.estado.configure(text="")

@@ -1,5 +1,16 @@
 # Libro de firmas docente: estado
 
+## 2026-10-29 (mañana): formato del Excel y barra de progreso
+- **Bordes del Excel (causa raíz):** el molde dibuja los bordes celda por celda y a mano; en la fila 2 (la que se copiaba a todos los
+  renglones) los martes tenían líneas finas y sin borde inferior, y en `tmyt` los martes y jueves la celda N° no tenía borde
+  inferior. Por eso el último docente de esos días quedaba abierto. Ahora `render_libro` cierra todo renglón usado con línea media
+  en N°, nombre y tratamiento (firma sin bordes). Probado con `tests/test_render_bordes.py` y con un barrido de todas las celdas
+  del libro real (0 distintas) y una vista del PDF exportado con Excel.
+- Observación sin tocar: los rótulos de día de la fila 1 vienen desparejos del molde original ("lunes" en minúscula, "    Martes"
+  con espacios y centrado, alineaciones distintas). Ofrecer normalizarlos.
+- La barra de progreso es continua y acompaña al contador; sigue el tiempo de la última vez (`duracion` en `datos/app_config.json`)
+  y no llega al 100 % hasta que termina.
+
 ## 2026-10-29: informe completo legible
 - "Ver informe completo" ahora es una ventana con tarjetas (`VentanaInforme` en `app.py`) armada por `informe_vista.py`, que
   interpreta el texto de `informe.txt`: título + resumen en una etiqueta, "Qué hacer", docentes en negrita, celdas sin curso como
@@ -63,10 +74,6 @@ y licencias y llena el molde de Excel. 40 tests (`python -m unittest discover -s
 - Las "horas" de la cabecera pueden superar los módulos (clases simultáneas u horas fuera de grilla): aviso, no error.
 
 **Pendiente**
-- **Para el 2026-10-29 (pedido del usuario):** (1) revisar el formato de salida del Excel: "hay cosas que no se ven bien" (sin detallar;
-  pedirle que muestre cuáles: mirar el `.xlsx` generado y su vista de impresión); (2) volver a poner una barra de progreso junto al
-  contador de segundos al armar el libro (el usuario primero pidió contador en vez de barra, ahora quiere las dos; la barra puede ser
-  determinada según el tiempo estimado de ~18 s).
 - Que el usuario pruebe la app (doble clic en el acceso directo) y diga qué le falta.
 - Completar `desde`/`hasta` de las licencias (hoy "sin fecha de fin"; el informe lo recuerda).
 - Prueba física: imprimir una hoja y apoyarla sobre el libro real.
