@@ -39,11 +39,27 @@ def motivo(ruta):
         return f"{e.strerror or type(e).__name__} (código {codigo})"
 
 
+def corregir_barra(ruta):
+    r"""'\Servidor\carpeta' (una sola barra al principio) es '\\Servidor\carpeta': una ruta de red a la que se le perdió
+    una barra. Windows la tomaría como una carpeta de la unidad actual (C:\Servidor\...), que no es la compartida."""
+    if ruta.startswith("\\") and not ruta.startswith("\\\\"):
+        return "\\" + ruta
+    return ruta
+
+
 def _resolver(ruta_config=RUTA_CONFIG_TXT):
     """(carpeta, aviso). El aviso queda vacío si todo está bien."""
     pedida = leer_config_txt(ruta_config).get("Datos", "")
     if not pedida:
         return LOCAL, ""
+    corregida = corregir_barra(pedida)
+    if corregida != pedida:  # config.txt escrito con la ruta mal: se repara solo
+        pedida = corregida
+        if not motivo(pedida):
+            try:
+                fijar_carpeta_datos(pedida, ruta_config)
+            except OSError:
+                pass
     por_que = motivo(pedida)
     if not por_que:
         return pedida, ""

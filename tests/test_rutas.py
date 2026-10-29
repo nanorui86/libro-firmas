@@ -61,3 +61,25 @@ class Motivo(unittest.TestCase):
             nueva = r"Z:\datos con tilde í"
             rutas.fijar_carpeta_datos(nueva, ruta)
             self.assertEqual(rutas.leer_config_txt(ruta), {"Otra": "1", "Datos": nueva})
+
+
+class BarraPerdida(unittest.TestCase):
+    """Un config.txt con la ruta de red escrita con una sola barra inicial se interpreta como ruta de red."""
+
+    def test_corrige_una_sola_barra(self):
+        self.assertEqual(rutas.corregir_barra(r"\Servidor\carpeta"), r"\\Servidor\carpeta")
+
+    def test_no_toca_las_rutas_bien_escritas(self):
+        for ok in (r"\\Servidor\carpeta", r"C:\datos", r"Z:\carpeta con espacios"):
+            self.assertEqual(rutas.corregir_barra(ok), ok)
+
+    def test_resolver_repara_el_config(self):
+        with tempfile.TemporaryDirectory() as d:
+            ruta = os.path.join(d, "config.txt")
+            with open(ruta, "w", encoding="utf-8") as f:
+                f.write("Datos=" + os.path.join(d, "x") + "\n")  # ruta de unidad: no se toca
+            self.assertEqual(rutas._resolver(ruta)[0], os.path.join(d, "x")) if os.path.isdir(os.path.join(d, "x")) else None
+            with open(ruta, "w", encoding="utf-8") as f:
+                f.write("Datos=" + "\\" + "Servidor_inexistente" + "\\datos\n")
+            carpeta, aviso = rutas._resolver(ruta)
+            self.assertIn("\\\\Servidor_inexistente", aviso)  # el aviso ya muestra la ruta corregida

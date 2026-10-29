@@ -2,6 +2,11 @@
 
 Cada cambio sube la versión (`version.py`); la versión se ve abajo a la izquierda en la ventana.
 
+## 1.6.2 — 2026-10-29
+- Arreglo: el instalador 1.6.0/1.6.1 escribía la carpeta de datos con UNA barra al principio (`\Servidor\...` en vez de
+  `\\Servidor\...`), así que ninguna PC encontraba la carpeta compartida. Ahora la ruta se corrige sola al abrir (y se repara el
+  `config.txt`), y `publicar.ps1` se niega a armar un instalador con una ruta mal escrita.
+
 ## 1.6.1 — 2026-10-29
 - Si la carpeta de datos compartida no abre desde una PC, el aviso dice el motivo exacto que da Windows y ofrece elegir la carpeta a
   mano (se guarda en `config.txt` y el programa se reabre).

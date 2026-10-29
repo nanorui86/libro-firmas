@@ -47,14 +47,14 @@ Name: "{app}\salida"
 
 [Files]
 Source: "..\publicacion\paquete\Libro de firmas\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "datos\*,entrada\*,salida\*,config.txt,app_config.json,error_app.txt"
-; Datos compartidos: solo si todavia no existen (nunca pisa lo que ya cargaron las demas PC) y no se borran al desinstalar.
-Source: "..\datos\plantilla_libro.xlsx"; DestDir: "{#CarpetaDatos}"; Flags: onlyifdoesntexist uninsneveruninstall; Check: CopiarDatos
-Source: "..\datos\docentes.csv"; DestDir: "{#CarpetaDatos}"; Flags: onlyifdoesntexist uninsneveruninstall; Check: CopiarDatos
-Source: "..\datos\mdb_tratamiento.csv"; DestDir: "{#CarpetaDatos}"; Flags: onlyifdoesntexist uninsneveruninstall skipifsourcedoesntexist; Check: CopiarDatos
-Source: "..\datos\excepciones.csv"; DestDir: "{#CarpetaDatos}"; Flags: onlyifdoesntexist uninsneveruninstall skipifsourcedoesntexist; Check: CopiarDatos
-Source: "..\datos\licencias.csv"; DestDir: "{#CarpetaDatos}"; Flags: onlyifdoesntexist uninsneveruninstall skipifsourcedoesntexist; Check: CopiarDatos
-Source: "..\datos\horarios_manuales.csv"; DestDir: "{#CarpetaDatos}"; Flags: onlyifdoesntexist uninsneveruninstall skipifsourcedoesntexist; Check: CopiarDatos
-Source: "..\datos\turnos_ultimo_libro.csv"; DestDir: "{#CarpetaDatos}"; Flags: onlyifdoesntexist uninsneveruninstall skipifsourcedoesntexist; Check: CopiarDatos
+; Datos compartidos: se embeben y se copian por codigo (ver [Code]) solo si todavia no existen; si la red falla, no se aborta.
+Source: "..\datos\plantilla_libro.xlsx"; DestDir: "{tmp}"; Flags: dontcopy
+Source: "..\datos\docentes.csv"; DestDir: "{tmp}"; Flags: dontcopy
+Source: "..\datos\mdb_tratamiento.csv"; DestDir: "{tmp}"; Flags: dontcopy skipifsourcedoesntexist
+Source: "..\datos\excepciones.csv"; DestDir: "{tmp}"; Flags: dontcopy skipifsourcedoesntexist
+Source: "..\datos\licencias.csv"; DestDir: "{tmp}"; Flags: dontcopy skipifsourcedoesntexist
+Source: "..\datos\horarios_manuales.csv"; DestDir: "{tmp}"; Flags: dontcopy skipifsourcedoesntexist
+Source: "..\datos\turnos_ultimo_libro.csv"; DestDir: "{tmp}"; Flags: dontcopy skipifsourcedoesntexist
 
 [Icons]
 Name: "{group}\Libro de firmas"; Filename: "{app}\Libro de firmas.exe"
@@ -64,14 +64,9 @@ Name: "{autodesktop}\Libro de firmas"; Filename: "{app}\Libro de firmas.exe"; Ta
 Filename: "{app}\Libro de firmas.exe"; Description: "Abrir Libro de firmas"; Flags: nowait postinstall skipifsilent
 
 [Code]
-// Si la carpeta de datos no se puede crear (por ejemplo, sin red), el programa se instala igual y se avisa.
+// Los datos viven en una carpeta compartida de la red. Si no se puede abrir (sin red), el programa se instala igual y se avisa.
 var
   SinDatos: Boolean;
-
-function CopiarDatos: Boolean;
-begin
-  Result := not SinDatos;
-end;
 
 function InitializeSetup: Boolean;
 begin
@@ -82,7 +77,37 @@ begin
            'El programa se instala igual, pero no va a encontrar los datos hasta que haya conexión a la red.', mbInformation, MB_OK);
 end;
 
-// config.txt: se crea solo si no existe (así una actualización no pisa lo configurado). UTF-8 por las tildes.
+// Copia cada archivo de datos solo si todavia no existe en la carpeta compartida (nunca pisa lo que ya cargaron las demas PC).
+procedure CopiarDatosIniciales;
+var
+  Nombres: array of String;
+  I: Integer;
+  Destino: String;
+begin
+  SetArrayLength(Nombres, 7);
+  Nombres[0] := 'plantilla_libro.xlsx';
+  Nombres[1] := 'docentes.csv';
+  Nombres[2] := 'mdb_tratamiento.csv';
+  Nombres[3] := 'excepciones.csv';
+  Nombres[4] := 'licencias.csv';
+  Nombres[5] := 'horarios_manuales.csv';
+  Nombres[6] := 'turnos_ultimo_libro.csv';
+  for I := 0 to GetArrayLength(Nombres) - 1 do
+  begin
+    Destino := '{#CarpetaDatos}\' + Nombres[I];
+    if not FileExists(Destino) then
+    begin
+      try
+        ExtractTemporaryFile(Nombres[I]);
+        FileCopy(ExpandConstant('{tmp}\') + Nombres[I], Destino, True);
+      except
+        // archivo que no viajaba en el instalador: se sigue con el siguiente
+      end;
+    end;
+  end;
+end;
+
+// config.txt: se crea solo si no existe (asi una actualizacion no pisa lo configurado). UTF-8 por las tildes.
 procedure CurStepChanged(CurStep: TSetupStep);
 var
   Cfg: String;
@@ -90,6 +115,8 @@ var
 begin
   if CurStep = ssPostInstall then
   begin
+    if not SinDatos then
+      CopiarDatosIniciales;
     Cfg := ExpandConstant('{app}\config.txt');
     if not FileExists(Cfg) then
     begin

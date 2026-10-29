@@ -39,7 +39,7 @@ LIBRO DE FIRMAS DOCENTE - version $version  (version portable)
 
 Esta version guarda los datos en su propia carpeta datos\ (no se comparten con otras PC).
 Para compartir los datos entre PC, use el instalador, o cree un archivo config.txt junto al .exe con una linea:
-    Datos=\servidor\carpeta
+    Datos=\\servidor\carpeta
 y copie alli el contenido de datos\.
 Necesita Microsoft Excel para abrir e imprimir el libro.
 "@ | Set-Content -Path "$portable\LEEME.txt" -Encoding ASCII
@@ -55,6 +55,8 @@ if (-not $env:LIBRO_DATOS) {
     if (-not (Test-Path $rutaRed)) { throw "Falta datos\ruta_red.txt (o la variable LIBRO_DATOS) con la carpeta compartida de datos." }
     $env:LIBRO_DATOS = (Get-Content $rutaRed -Raw -Encoding UTF8).Trim()
 }
+# Una ruta de red necesita DOS barras al principio; con una sola Windows la toma como carpeta de la unidad C: (ya paso una vez).
+if ($env:LIBRO_DATOS -notmatch '^(\\\\[^\\]|[A-Za-z]:\\)') { throw "La carpeta de datos '$($env:LIBRO_DATOS)' no empieza con \\servidor ni con una unidad (C:\)." }
 $env:LIBRO_VERSION = $version
 & $iscc /Q (Join-Path $PSScriptRoot "instalador\LibroFirmas.iss")
 if ($LASTEXITCODE -ne 0) { throw "Inno Setup fallo" }

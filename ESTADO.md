@@ -1,5 +1,20 @@
 # Libro de firmas docente: estado
 
+## 2026-10-29 (noche, 3): v1.6.2, causa raíz del "no se puede abrir la carpeta" (barra perdida)
+- Causa confirmada: `datos\ruta_red.txt` tenía UNA barra inicial (una herramienta de shell colapsó `\\`), así que el instalador
+  1.6.0/1.6.1 escribió `Datos=\Servidor\...`; Windows lo toma como `C:\Servidor\...`. En la PC del usuario eso creó por error una
+  carpeta local `C:\<nombre del servidor>\...\Libro de firmas (datos)` con los 7 archivos (idénticos a `datos\` de desarrollo). La
+  carpeta real de red no existía todavía. Fuera de la red, un `config.txt` mal escrito se ve igual que una red caída.
+- Arreglos: `ruta_red.txt` corregido; `rutas.corregir_barra` repara solo un `Datos=` con una barra (y reescribe `config.txt`);
+  `publicar.ps1` se niega a armar el instalador si la ruta no empieza con `\\x` o `X:\`; el LEEME del zip también tenía la barra mal.
+- Instalador más robusto: los datos ya no van en `[Files]` hacia la red (si la red fallaba, Inno abortaba con Abort/Retry/Ignore);
+  se copian por código solo si faltan, dentro de try/except. Sin red: instala igual (código 0) y avisa. Probado sin red y con carpeta
+  de datos temporal (los 7 archivos); limpio lo temporal. Las pruebas usan el mismo AppId, así que el registro de desinstalación
+  de la PC quedó apuntando a una carpeta de prueba: se corrige al correr el instalador 1.6.2 real.
+- Pendiente: el usuario corre `LibroFirmas-Setup-1.6.2.exe` (también en la PC de la compañera); luego se puede borrar la carpeta
+  local con el nombre del servidor en `C:\` (duplicado verificado; no borrar sin confirmar). Push de `6ca5a` y v1.6.2 cuando lo autorice, barriendo
+  apellidos de todo el historial antes. Las capturas `error red*.png` (sin versionar) hay que borrarlas: tienen rutas reales.
+
 ## 2026-10-29 (noche, 2): v1.6.1, carpeta compartida inaccesible en la PC de una compañera
 - Síntoma: al abrir en otra PC, cartel "Datos compartidos: no se pudo abrir la carpeta..." (y un aviso parecido al instalar), aunque
   esa persona sí abre la carpeta desde el Explorador. Causa no confirmada (pudo ser otro nombre/unidad de red, credenciales o
