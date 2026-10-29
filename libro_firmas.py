@@ -21,6 +21,7 @@ import licencias
 import maestro
 import parse_horario
 import render_libro
+import rutas
 import turnos_previos
 import validar
 from clasificar import DIAS, clasificar, clave_docente
@@ -109,13 +110,13 @@ def crear_parser():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("profesores", help="PDF de horarios por docente")
     ap.add_argument("--cursos", help="PDF de horarios por curso (validación cruzada)")
-    ap.add_argument("--plantilla", default="datos/plantilla_libro.xlsx")
-    ap.add_argument("--maestro", default="datos/docentes.csv")
-    ap.add_argument("--mdb", default="datos/mdb_tratamiento.csv")
-    ap.add_argument("--excepciones", default="datos/excepciones.csv")
-    ap.add_argument("--manuales", default="datos/horarios_manuales.csv", help="horarios transcriptos a mano (escaneos)")
-    ap.add_argument("--licencias", default="datos/licencias.csv", help="registro de licencias (desde, hasta, motivo)")
-    ap.add_argument("--turnos-previos", default="datos/turnos_ultimo_libro.csv", help="memoria del último libro generado")
+    ap.add_argument("--plantilla", default=rutas.en_datos("plantilla_libro.xlsx"))
+    ap.add_argument("--maestro", default=rutas.en_datos("docentes.csv"))
+    ap.add_argument("--mdb", default=rutas.en_datos("mdb_tratamiento.csv"))
+    ap.add_argument("--excepciones", default=rutas.en_datos("excepciones.csv"))
+    ap.add_argument("--manuales", default=rutas.en_datos("horarios_manuales.csv"), help="horarios transcriptos a mano (escaneos)")
+    ap.add_argument("--licencias", default=rutas.en_datos("licencias.csv"), help="registro de licencias (desde, hasta, motivo)")
+    ap.add_argument("--turnos-previos", default=rutas.en_datos("turnos_ultimo_libro.csv"), help="memoria del último libro generado")
     ap.add_argument("--salida", default="salida")
     ap.add_argument("--fecha", help="fecha de referencia AAAA-MM-DD (por defecto, hoy)")
     return ap

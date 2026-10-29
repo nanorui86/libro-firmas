@@ -2,6 +2,11 @@
 
 Cada cambio sube la versión (`version.py`); la versión se ve abajo a la izquierda en la ventana.
 
+## 1.6.0 — 2026-10-29
+- Datos compartidos entre PC: `config.txt` (`Datos=carpeta de red`) hace que licencias, excluidos, docentes y horarios a mano se
+  vean igual en todas las PC; si no hay red avisa y usa la copia local.
+- Instalador (Inno Setup) y ícono propio; el zip pasa a ser la versión portable.
+
 ## 1.5.0 — 2026-10-29
 - Versión numerada y visible; este registro de cambios.
 - Se puede instalar en otra PC (`publicar.ps1` arma una carpeta lista para copiar, sin necesidad de Python).

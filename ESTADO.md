@@ -1,5 +1,17 @@
 # Libro de firmas docente: estado
 
+## 2026-10-29 (noche): datos compartidos e instalador (v1.6.0)
+- El usuario no quiere copiar `datos\` a mano en cada cambio y dijo que en esta PC hay Inno Setup. Se hizo `rutas.py` + `config.txt`
+  (`Datos=carpeta de red`): licencias, excluidos, docentes y horarios a mano se leen y se guardan ahí; `app_config.json` (PDF
+  elegidos, duración) queda por PC junto al programa. Sin red: avisa y usa la copia local si existe.
+- Instalador `instalador\LibroFirmas.iss` (como el de Registro de Egresados: `C:\LibroFirmas`, sin admin, config.txt solo si falta,
+  datos a la red solo si no existen y sin borrarlos al desinstalar). Carpeta de datos elegida: `...\Docentes\Lista Personal y
+  Premio Asistencia\Libro de firmas (datos)` (junto al `Lib. Firmas.xls`; en `datosuta_red.txt`, no versionada).
+- Probado instalando en silencio en una carpeta temporal con una "red" temporal: copia los datos, un cambio en el archivo
+  compartido se refleja al armar, la ventana abre, desinstalar deja los datos. NO se instaló nada en la PC real ni se creó la carpeta
+  de la red: la crea el primer instalador que se ejecute. Hay ícono propio (`recursospp.ico`).
+- Riesgo asumido: dos PC guardando el mismo CSV a la vez (el último gana); poco probable con uso de una persona.
+
 ## 2026-10-29 (tarde): versiones y otra PC
 - El usuario pidió numerar las versiones (la ventana decía 1.0 siempre): `version.py` (hoy 1.5.0) se muestra abajo a la izquierda y
   se sube en cada cambio, con su entrada en `CHANGELOG.md`.

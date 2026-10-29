@@ -19,16 +19,17 @@ import informe_vista
 import libro_firmas
 import maestro
 import repositorio
+import rutas
 from clasificar import DIAS
 from version import VERSION
 
-# Junto al programa están datos\, entrada\ y salida\: la carpeta del .exe si está empaquetado, la del código si no.
-BASE = os.path.dirname(sys.executable) if getattr(sys, "frozen", False) else os.path.dirname(os.path.abspath(__file__))
-RUTA_CONFIG = os.path.join(BASE, "datos", "app_config.json")
-RUTA_LICENCIAS = os.path.join(BASE, "datos", "licencias.csv")
-RUTA_MANUALES = os.path.join(BASE, "datos", "horarios_manuales.csv")
-RUTA_MAESTRO = os.path.join(BASE, "datos", "docentes.csv")
-RUTA_EXCEPCIONES = os.path.join(BASE, "datos", "excepciones.csv")
+# Junto al programa están entrada\ y salida\; los datos (licencias, excluidos...) pueden estar en una carpeta compartida (rutas.py).
+BASE = rutas.BASE
+RUTA_CONFIG = os.path.join(BASE, "app_config.json")  # PDF elegidos y duración: propio de cada PC
+RUTA_LICENCIAS = rutas.en_datos("licencias.csv")
+RUTA_MANUALES = rutas.en_datos("horarios_manuales.csv")
+RUTA_MAESTRO = rutas.en_datos("docentes.csv")
+RUTA_EXCEPCIONES = rutas.en_datos("excepciones.csv")
 DURACION_INICIAL = 18.0  # segundos que tarda armar el libro; después se aprende de la última vez
 
 # Colores y medidas de Movimientos Docentes / Registro de Egresados (Material Design, primario índigo).
@@ -762,6 +763,11 @@ class App(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Libro de firmas docente – Hölters")
+        icono = os.path.join(getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__))), "recursos", "app.ico")
+        try:
+            self.iconbitmap(icono)
+        except tk.TclError:
+            pass  # sin ícono la ventana funciona igual
         self.geometry("1180x780")
         self.minsize(1000, 700)
         aplicar_estilo(self)
@@ -779,6 +785,8 @@ class App(tk.Tk):
                                ("excluidos", lambda: pantalla_excluidos(self.contenido))):
             self.pantallas[clave] = fabrica()  # cada pantalla se arma una vez; cambiar de sección solo cambia cuál se ve
         self.mostrar("armar")
+        if rutas.AVISO:
+            self.after(300, lambda: messagebox.showwarning("Datos compartidos", rutas.AVISO, parent=self))
 
     def mostrar(self, clave):
         for p in self.pantallas.values():

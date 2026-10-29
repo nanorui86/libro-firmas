@@ -45,10 +45,15 @@ La ventana (`app.py`, tkinter) tiene tres pestañas:
 
 ## Usarlo en otra PC
 
-`publicar.ps1` arma `publicacion\Libro de firmas <versión>.zip` (unos 35 MB): una carpeta con el programa y la carpeta `datos\`,
-que no necesita Python. En la otra PC se descomprime, se hace doble clic en `Libro de firmas.exe` y listo (hace falta Excel para
-imprimir). Cada PC tiene su propia copia de `datos\`; para llevar licencias o excluidos de una a otra, se copia esa carpeta.
-El paquete lleva nombres de docentes: no subirlo a GitHub. Versiones y cambios: `CHANGELOG.md` (`version.py` la sube en cada cambio).
+`publicar.ps1` arma, sin necesidad de Python en la otra PC:
+- `instalador\Salida\LibroFirmas-Setup-<versión>.exe` (Inno Setup): instala en `C:\LibroFirmas`, crea los accesos directos y un
+  `config.txt` con `Datos=<carpeta compartida de la red>`. Los datos (docentes, licencias, excluidos, horarios a mano, plantilla) viven
+  ahí y **todas las PC ven los mismos cambios**; el instalador los copia a esa carpeta solo si todavía no existen. Para actualizar
+  se ejecuta el instalador nuevo encima (no pisa `config.txt` ni los datos). La carpeta compartida sale de `datosuta_red.txt`
+  (no se versiona). Si no hay red, el programa avisa y usa la copia local si existe.
+- `publicacion\Libro de firmas <versión>.zip`: versión portable con su propia copia de `datos\` (no compartida).
+
+Los dos llevan nombres de docentes: no subirlos a GitHub. Versiones y cambios: `CHANGELOG.md` (`version.py` la sube en cada cambio).
 
 ## Uso por línea de comandos
 
