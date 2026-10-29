@@ -80,5 +80,17 @@ class Rotulos(unittest.TestCase):
                                  {(12.0, True, "left", "center")})
 
 
+class AreaDeImpresion(unittest.TestCase):
+    def test_tm_no_imprime_la_columna_en_blanco_despues_del_viernes(self):
+        with tempfile.TemporaryDirectory() as d:
+            molde, salida = os.path.join(d, "m.xlsx"), os.path.join(d, "s.xlsx")
+            _molde(molde)
+            listas = {t: [[("PEREZ, Ana", "Profesora")] * 3 for _ in range(5)] for t in render_libro.HOJAS}
+            render_libro.render(molde, salida, listas)
+            wb = openpyxl.load_workbook(salida)
+            self.assertTrue(wb["prof. tm 2026"].print_area.endswith("$V$60"))  # el molde de prueba llega a la fila 60
+            self.assertFalse(wb["prof.tmyt.2026"].print_area)
+
+
 if __name__ == "__main__":
     unittest.main()

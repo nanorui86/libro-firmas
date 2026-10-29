@@ -8,6 +8,9 @@
   del libro real (0 distintas) y una vista del PDF exportado con Excel.
 - Rótulos de día de la fila 1 (venían desparejos del molde: "lunes", "    Martes", tamaños y alineaciones distintas): ahora
   Lunes/Martes/Miércoles/Jueves/Viernes, Arial 12 negrita, alineados a la izquierda (`render_libro.ROTULOS`, con prueba).
+- Página en blanco al imprimir `prof. tm`: el molde tiene formato (sin datos) hasta la columna W y Excel la imprimía como una hoja
+  más después del viernes; el libro original también la saca (7 páginas). Ahora el área de impresión de `tm` corta en V
+  (`ULTIMA_COLUMNA_IMPRESION`): tm 6 páginas y tmyt 5, ninguna en blanco, zoom 100.
 - La barra de progreso es continua y acompaña al contador; sigue el tiempo de la última vez (`duracion` en `datos/app_config.json`)
   y no llega al 100 % hasta que termina.
 

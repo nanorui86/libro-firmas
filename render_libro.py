@@ -9,6 +9,7 @@ from copy import copy
 
 import openpyxl
 from openpyxl.styles import Alignment, Border, Font, Side
+from openpyxl.utils import get_column_letter
 from openpyxl.styles.cell_style import StyleArray
 from openpyxl.worksheet.pagebreak import Break
 
@@ -19,6 +20,9 @@ RENGLONES_POR_PAGINA = 24
 # Saltos del original (verificados con Excel): columnas tras H, P (y V en tm); filas de a 24.
 SALTOS_COLUMNA = {"tm": (8, 16, 22), "tmyt": (8, 16)}
 PAGINAS_FILAS = {"tm": 1, "tmyt": 2}
+# El molde de tm tiene formato (sin datos) hasta la columna W y Excel la imprime como una hoja más, en blanco, después del
+# viernes (el libro original también la saca). El área de impresión corta en V, la última columna con renglones.
+ULTIMA_COLUMNA_IMPRESION = {"tm": 22}
 RENGLONES_PRIMERA_PAGINA = RENGLONES_POR_PAGINA - 1  # la fila 1 es el encabezado del día
 
 
@@ -100,6 +104,8 @@ def render(plantilla, salida, listas):
             celda.font = Font(name="Arial", size=12, bold=True)
             celda.alignment = Alignment(horizontal="left", vertical="center")
 
+        if turno in ULTIMA_COLUMNA_IMPRESION:
+            ws.print_area = f"A1:{get_column_letter(ULTIMA_COLUMNA_IMPRESION[turno])}{ultima}"
         ws.row_breaks.brk = []
         ws.col_breaks.brk = []
         for k in range(1, PAGINAS_FILAS[turno] + 1):
