@@ -274,24 +274,42 @@ class TablaEditable(ttk.Frame):
         self.recargar()
         return True
 
+    def _al_dia(self):
+        """True si el archivo sigue igual que lo que se ve; si otra PC lo cambió, actualiza la lista y avisa."""
+        try:
+            igual = self.leer() == self.filas
+        except (ValueError, OSError):
+            return True  # si no se puede leer, que el guardado informe el problema
+        if not igual:
+            self.recargar()
+            messagebox.showinfo("La lista cambió", "Alguien modificó esta lista desde otra PC. Se actualizó lo que ves: "
+                                "revisala y repetí la acción.", parent=self)
+        return igual
+
     def agregar(self):
+        if not self._al_dia():
+            return
         nueva = self._formulario("Agregar", {})
-        if nueva:
+        if nueva and self._al_dia():
             self._guardar_con(self.filas + [nueva])
 
     def editar(self):
+        if not self._al_dia():
+            return
         i = self._seleccion()
         if i is None:
             return
         nueva = self._formulario("Editar", self.vista_para_editar(self.filas[i]))
-        if nueva:
+        if nueva and self._al_dia():
             self._guardar_con(self.filas[:i] + [nueva] + self.filas[i + 1:])
 
     def quitar(self):
+        if not self._al_dia():
+            return
         i = self._seleccion()
         if i is None:
             return
-        if messagebox.askyesno("Quitar", "¿Quitar esta fila de la lista?", parent=self):
+        if messagebox.askyesno("Quitar", "¿Quitar esta fila de la lista?", parent=self) and self._al_dia():
             self._guardar_con(self.filas[:i] + self.filas[i + 1:])
 
 
@@ -328,6 +346,7 @@ def pantalla_licencias(padre):
                                          en_lista="Sí" if f["en_lista"] != "no" else "No")
     t.ayuda_formulario = "Podés escribir el nombre si no está en la lista, como Apellido, Nombre."
     t.pack(fill="both", expand=True)
+    pantalla.al_mostrar = t.recargar
     return pantalla
 
 
@@ -356,6 +375,7 @@ def pantalla_manuales(padre):
                           "módulo de la tarde, ese día va en la hoja de mañana y tarde.")
     t.vista_para_editar = lambda f: dict(f, dia=f["dia"].capitalize())
     t.pack(fill="both", expand=True)
+    pantalla.al_mostrar = t.recargar
     return pantalla
 
 
@@ -376,6 +396,7 @@ def pantalla_excluidos(padre):
     t.ayuda_formulario = ("Elegí el docente de la lista (no aparecen los que ya están excluidos) o escribilo como figura "
                           "en Untis: Apellido, Nombre.")
     t.pack(fill="both", expand=True)
+    pantalla.al_mostrar = t.recargar
     return pantalla
 
 
@@ -812,6 +833,9 @@ class App(tk.Tk):
             p.pack_forget()
         self.pantallas[clave].pack(fill="both", expand=True)
         self.lateral.marcar(clave)
+        al_mostrar = getattr(self.pantallas[clave], "al_mostrar", None)
+        if al_mostrar:
+            al_mostrar()  # los datos son compartidos: se relee lo que cargó otra PC
 
     def abrir_salida(self):
         carpeta = os.path.dirname(self.ruta_libro) if self.ruta_libro else os.path.join(BASE, "salida")

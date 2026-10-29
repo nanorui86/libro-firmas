@@ -2,6 +2,11 @@
 
 Cada cambio sube la versión (`version.py`); la versión se ve abajo a la izquierda en la ventana.
 
+## 1.6.3 — 2026-10-29
+- Datos compartidos sin pisarse: Licencias, Horarios a mano y Excluidos se vuelven a leer cada vez que se abre la pantalla, y antes
+  de agregar, editar o quitar se comprueba que otra PC no haya cambiado la lista (si cambió, se actualiza y avisa). Ya no hace
+  falta cerrar y abrir el programa para ver lo que cargó la otra persona.
+
 ## 1.6.2 — 2026-10-29
 - Arreglo: el instalador 1.6.0/1.6.1 escribía la carpeta de datos con UNA barra al principio (`\Servidor\...` en vez de
   `\\Servidor\...`), así que ninguna PC encontraba la carpeta compartida. Ahora la ruta se corrige sola al abrir (y se repara el

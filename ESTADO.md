@@ -1,5 +1,16 @@
 # Libro de firmas docente: estado
 
+## 2026-10-29 (noche, 4): v1.6.3, datos compartidos sin pisarse
+- Riesgo detectado al compartir datos entre dos PC: cada tabla (Licencias, Horarios a mano, Excluidos) se leía una sola vez al abrir
+  la app y guardaba la lista completa, así que una PC con la pantalla vieja podía pisar lo que cargó la otra.
+- Cambio: las tres pantallas se releen al abrirse (`al_mostrar`) y `TablaEditable._al_dia` compara el archivo con lo que se ve antes
+  de agregar/editar/quitar (y otra vez antes de guardar); si cambió, actualiza y avisa. Sigue habiendo una ventana mínima entre
+  la comprobación y el guardado (no hay bloqueo de archivos). Probado con una tabla simulada y abriendo la app completa.
+- GitHub: el commit v1.6.1 había llevado por error `error.png` (captura con la ruta de red); se rehicieron los commits en una
+  rama limpia y se subió como `main` (4c4a6). La rama vieja quedó local como `main-vieja` (no subir).
+- Pendiente: instalar 1.6.3 en las dos PC; el usuario carga las fechas de licencias en la app; prueba física de impresión.
+  Push de v1.6.3 solo si el usuario lo autoriza.
+
 ## 2026-10-29 (noche, 3): v1.6.2, causa raíz del "no se puede abrir la carpeta" (barra perdida)
 - Causa confirmada: `datos\ruta_red.txt` tenía UNA barra inicial (una herramienta de shell colapsó `\\`), así que el instalador
   1.6.0/1.6.1 escribió `Datos=\Servidor\...`; Windows lo toma como `C:\Servidor\...`. En la PC del usuario eso creó por error una
