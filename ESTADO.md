@@ -1,5 +1,13 @@
 # Libro de firmas docente: estado
 
+## 2026-10-29 (tarde): versiones y otra PC
+- El usuario pidió numerar las versiones (la ventana decía 1.0 siempre): `version.py` (hoy 1.5.0) se muestra abajo a la izquierda y
+  se sube en cada cambio, con su entrada en `CHANGELOG.md`.
+- Otra PC: `publicar.ps1` (PyInstaller, carpeta sin Python, ~35 MB) arma `publicacion\Libro de firmas 1.5.0.zip` con `datos\` y un
+  LEEME. Probado copiándolo a otra carpeta: la ventana abre y `--cli` arma el mismo libro (mismas listas) en 18 s. `lanzador.py` es
+  el punto de entrada (frozen-aware). Pendiente: probarlo en la PC real; si se quiere compartir datos entre PCs, hoy cada una
+  tiene su copia de `datos\` (se podría apuntar a una carpeta de red).
+
 ## 2026-10-29 (mañana): formato del Excel y barra de progreso
 - **Bordes del Excel (causa raíz):** el molde dibuja los bordes celda por celda y a mano; en la fila 2 (la que se copiaba a todos los
   renglones) los martes tenían líneas finas y sin borde inferior, y en `tmyt` los martes y jueves la celda N° no tenía borde

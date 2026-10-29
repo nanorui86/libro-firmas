@@ -8,6 +8,7 @@ import json
 import math
 import os
 import queue
+import sys
 import threading
 import time
 import tkinter as tk
@@ -19,14 +20,15 @@ import libro_firmas
 import maestro
 import repositorio
 from clasificar import DIAS
+from version import VERSION
 
-BASE = os.path.dirname(os.path.abspath(__file__))
+# Junto al programa están datos\, entrada\ y salida\: la carpeta del .exe si está empaquetado, la del código si no.
+BASE = os.path.dirname(sys.executable) if getattr(sys, "frozen", False) else os.path.dirname(os.path.abspath(__file__))
 RUTA_CONFIG = os.path.join(BASE, "datos", "app_config.json")
 RUTA_LICENCIAS = os.path.join(BASE, "datos", "licencias.csv")
 RUTA_MANUALES = os.path.join(BASE, "datos", "horarios_manuales.csv")
 RUTA_MAESTRO = os.path.join(BASE, "datos", "docentes.csv")
 RUTA_EXCEPCIONES = os.path.join(BASE, "datos", "excepciones.csv")
-VERSION = "Versión 1.0"
 DURACION_INICIAL = 18.0  # segundos que tarda armar el libro; después se aprende de la última vez
 
 # Colores y medidas de Movimientos Docentes / Registro de Egresados (Material Design, primario índigo).
@@ -742,7 +744,7 @@ class Lateral(tk.Frame):
             fila.bind("<Enter>", lambda _e, f=fila: f["bg"] != LATERAL_SEL and f.configure(bg=LATERAL_HOVER))
             fila.bind("<Leave>", lambda _e, f=fila: f["bg"] != LATERAL_SEL and f.configure(bg=INDIGO))
             self.items[clave] = fila
-        tk.Label(self, text=VERSION, bg=INDIGO, fg="#C5CAE9", font=(FUENTE, 8)).pack(side="bottom", anchor="w", padx=16, pady=(4, 12))
+        tk.Label(self, text=f"Versión {VERSION}", bg=INDIGO, fg="#C5CAE9", font=(FUENTE, 8)).pack(side="bottom", anchor="w", padx=16, pady=(4, 12))
         for texto, accion in (("✕   Salir", app.destroy), ("🗁   Carpeta de salida", app.abrir_salida)):
             b = tk.Label(self, text=texto, bg=INDIGO, fg="white", font=(FUENTE, 11), anchor="w", padx=14, pady=9, cursor="hand2")
             b.pack(side="bottom", fill="x", padx=8)

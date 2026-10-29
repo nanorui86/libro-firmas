@@ -12,3 +12,4 @@ excepciones.csv
 __pycache__/
 .venv/
 error_app.txt
+publicacion/

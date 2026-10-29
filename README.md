@@ -43,6 +43,13 @@ La ventana (`app.py`, tkinter) tiene tres pestañas:
 `repositorio.py` es la capa de datos de las dos tablas (sin pantalla, con tests). Las rutas elegidas se recuerdan en
 `datos/app_config.json`. Si la ventana no abre, el error queda en `error_app.txt`.
 
+## Usarlo en otra PC
+
+`publicar.ps1` arma `publicacion\Libro de firmas <versión>.zip` (unos 35 MB): una carpeta con el programa y la carpeta `datos\`,
+que no necesita Python. En la otra PC se descomprime, se hace doble clic en `Libro de firmas.exe` y listo (hace falta Excel para
+imprimir). Cada PC tiene su propia copia de `datos\`; para llevar licencias o excluidos de una a otra, se copia esa carpeta.
+El paquete lleva nombres de docentes: no subirlo a GitHub. Versiones y cambios: `CHANGELOG.md` (`version.py` la sube en cada cambio).
+
 ## Uso por línea de comandos
 
 ```
