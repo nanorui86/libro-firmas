@@ -1,5 +1,24 @@
 # Libro de firmas docente: estado
 
+## 2026-11-18: v1.7.0, lista de preceptores en la app
+- Pedido: armar e imprimir la hoja `prec. 2026` (preceptores, P.A., jefa de preceptores, ayudante de laboratorio) desde la app, con
+  días por persona, licencias y que la hoja crezca si hace falta. Diseño en `docs/superpowers/specs/2026-11-18-preceptores-design.md`
+  y plan en `docs/superpowers/plans/2026-11-18-preceptores.md` (se brainstormeó con el usuario: una fila por persona con casillas L M X J V).
+- Hecho: `preceptores.py` (CSV `preceptores.csv` en la carpeta de datos compartida, validación, licencias con la misma regla que
+  docentes pero en su archivo propio; en `licencias.csv` el armado de docentes las tomaría por docentes de licencia), `render_libro`
+  (hoja que crece: Jueves baja, bloques ganan renglones), `libro_firmas` (el libro lleva la hoja si existe el CSV; `armar_preceptores`
+  arma solo esa hoja), pantalla Preceptores con botón propio. Carga inicial desde la hoja actual: 22 personas (Viernes: 19).
+- Descubierto: el original de `prec. 2026` imprime 6 páginas, con una en blanco y los números de la columna I sueltos y cortados (la
+  columna P, ancha y vacía, y la I no entran en el ancho). Ahora el área de impresión son dos tramos (A-H e I-O) y salen 4 páginas
+  con el mismo contenido y las mismas posiciones que las páginas 1, 4, 5 y 6 del original (comprobado exportando a PDF con Excel).
+  Con 30 y 50 personas la paginación sigue bien. La prueba física de impresión de esta hoja la hace el usuario.
+- Pendiente: instalar 1.7.0 en las dos PC; probar impresión real; cargar licencias de preceptores si las hay. Los cargos quedaron como en
+  la hoja (hay "P.A", "P.A." y "PA"): unificar si el usuario quiere. Dos PC guardando a la vez: gana la última (igual que el resto).
+- **Antes de subir a GitHub:** los commits locales posteriores a `e3ce9` (hasta el anterior a este) traen apellidos reales de
+  preceptores en `tests/test_preceptores.py` y en el plan; ya están corregidos en el árbol de trabajo. No subir esos commits tal cual:
+  armar una rama nueva desde `origin/main` con un solo commit con el árbol final (el classifier bloquea `filter-branch`/`reset --hard`),
+  barrer apellidos de docentes y preceptores en todo lo que se suba y pedir autorización.
+
 ## 2026-10-29 (noche, 4): v1.6.3, datos compartidos sin pisarse
 - Riesgo detectado al compartir datos entre dos PC: cada tabla (Licencias, Horarios a mano, Excluidos) se leía una sola vez al abrir
   la app y guardaba la lista completa, así que una PC con la pantalla vieja podía pisar lo que cargó la otra.

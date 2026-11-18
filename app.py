@@ -19,6 +19,7 @@ from tkinter import filedialog, messagebox, ttk
 import informe_vista
 import libro_firmas
 import maestro
+import preceptores
 import repositorio
 import rutas
 from clasificar import DIAS
@@ -31,6 +32,8 @@ RUTA_LICENCIAS = rutas.en_datos("licencias.csv")
 RUTA_MANUALES = rutas.en_datos("horarios_manuales.csv")
 RUTA_MAESTRO = rutas.en_datos("docentes.csv")
 RUTA_EXCEPCIONES = rutas.en_datos("excepciones.csv")
+RUTA_PRECEPTORES = rutas.en_datos("preceptores.csv")
+RUTA_PLANTILLA = rutas.en_datos("plantilla_libro.xlsx")
 DURACION_INICIAL = 18.0  # segundos que tarda armar el libro; después se aprende de la última vez
 
 # Colores y medidas de Movimientos Docentes / Registro de Egresados (Material Design, primario índigo).
@@ -47,8 +50,8 @@ NOMBRES_DIA_SIN_TILDE = list(DIAS)
 
 COMO_IMPRIMIR = (
     ("1", "Tocá \"Abrir en Excel para imprimir\". Se abre el libro recién armado."),
-    ("2", "En Excel: Archivo > Imprimir. En qué imprimir elegí \"Imprimir todo el libro\" (así salen las dos hojas: "
-          "mañana, y mañana y tarde)."),
+    ("2", "En Excel: Archivo > Imprimir. En qué imprimir elegí \"Imprimir todo el libro\" (así salen todas las hojas: "
+          "mañana, mañana y tarde, y preceptores)."),
     ("3", "Dejá la escala en 100 % (\"Sin escala\"; no uses \"Ajustar a una página\") y el papel en A4 vertical. Los "
           "renglones miden lo mismo que los del libro de papel y por eso no se achica nada."),
     ("4", "Cada hoja sale en varias páginas: una con Lunes y Martes, otra con Miércoles y Jueves, otra con Viernes, y "
@@ -89,6 +92,7 @@ def aplicar_estilo(raiz):
     s.configure("Tarjeta.TFrame", background=TARJETA)
     s.configure("TLabel", background=FONDO, foreground=TEXTO)
     s.configure("Tarjeta.TLabel", background=TARJETA)
+    s.configure("Tarjeta.TCheckbutton", background=TARJETA)
     s.configure("Tenue.TLabel", foreground=TENUE)
     s.configure("TenueT.TLabel", background=TARJETA, foreground=TENUE)
     s.configure("Titulo.TLabel", font=(FUENTE, 17, "bold"))
@@ -151,8 +155,23 @@ class Pantalla(ttk.Frame):
 
 # ---------- formulario y tabla editable ----------
 
+CASILLAS_DIAS = object()  # en lugar de la lista de un desplegable: cinco casillas, una por día (L M X J V)
+LETRAS_DIAS = ("L", "M", "X", "J", "V")
+
+
+class VarDias:
+    """Las casillas de los días de un formulario; `get()` devuelve 'lunes,martes,...' con los tildados."""
+
+    def __init__(self, marcados):
+        self.vars = [tk.IntVar(value=int(d in marcados)) for d in DIAS]
+
+    def get(self):
+        return ",".join(d for d, v in zip(DIAS, self.vars) if v.get())
+
+
 class Formulario(tk.Toplevel):
-    """Ventana modal con un campo por columna. `campos`: [(clave, etiqueta, valores_del_desplegable | None)]."""
+    """Ventana modal con un campo por columna. `campos`: [(clave, etiqueta, valores_del_desplegable | None | CASILLAS_DIAS)].
+    Con CASILLAS_DIAS el valor son los días tildados (todos, si el campo no viene en `valores`)."""
 
     def __init__(self, padre, titulo, campos, valores, ayuda="", validar=None):
         super().__init__(padre)
@@ -165,11 +184,17 @@ class Formulario(tk.Toplevel):
             row=0, column=0, columnspan=2, sticky="w", pady=(0, 12))
         for i, (clave, etiqueta, opciones) in enumerate(campos, start=1):
             ttk.Label(self, text=etiqueta, style="Tarjeta.TLabel").grid(row=i, column=0, sticky="w", padx=(0, 14), pady=5)
-            var = self._vars[clave] = tk.StringVar(value=valores.get(clave, ""))
-            if opciones is None:
-                widget = ttk.Entry(self, textvariable=var, width=36)
+            if opciones is CASILLAS_DIAS:
+                var = self._vars[clave] = VarDias(DIAS if clave not in valores else valores[clave].split(","))
+                widget = ttk.Frame(self, style="Tarjeta.TFrame")
+                for letra, v in zip(LETRAS_DIAS, var.vars):
+                    ttk.Checkbutton(widget, text=letra, variable=v, style="Tarjeta.TCheckbutton").pack(side="left", padx=(0, 12))
             else:
-                widget = ttk.Combobox(self, textvariable=var, values=opciones, width=34)
+                var = self._vars[clave] = tk.StringVar(value=valores.get(clave, ""))
+                if opciones is None:
+                    widget = ttk.Entry(self, textvariable=var, width=36)
+                else:
+                    widget = ttk.Combobox(self, textvariable=var, values=opciones, width=34)
             widget.grid(row=i, column=1, sticky="ew", pady=5)
             if i == 1:
                 widget.focus_set()
@@ -396,6 +421,67 @@ def pantalla_excluidos(padre):
     t.ayuda_formulario = ("Elegí el docente de la lista (no aparecen los que ya están excluidos) o escribilo como figura "
                           "en Untis: Apellido, Nombre.")
     t.pack(fill="both", expand=True)
+    pantalla.al_mostrar = t.recargar
+    return pantalla
+
+
+CARGOS_PRECEPTORES = ["Preceptor", "Preceptora", "P.A.", "Jefa de Precep.", "Ay. de Lab."]
+
+
+def pantalla_preceptores(padre):
+    pantalla = Pantalla(padre, "Preceptores", "Lista de preceptores que firma cada día (hoja prec. 2026 del libro)")
+    Aviso(pantalla, "Una fila por persona: tildá los días en que viene (todos por defecto). Si tiene licencia, completá la "
+                    "parte de licencia: mientras esté vigente sigue en la lista, o sale si ponés \"No\" en ¿Sigue en la "
+                    "lista?, y vuelve sola al vencer. El libro de docentes también lleva esta hoja cuando se arma. "
+                    "Con más de 23 personas en un día la hoja se agranda sola.", ancho=760).pack(fill="x", pady=(0, 12))
+
+    def vista(f):
+        hoy = date.today()
+        dias = " ".join(letra if d in f["dias"].split(",") else "·" for d, letra in zip(DIAS, LETRAS_DIAS))
+        estado = preceptores.estado(f, hoy)
+        fuera = f["en_lista"] == "no" and estado.startswith("Vigente")
+        return {"nombre": preceptores.impreso(f), "cargo": f["cargo"], "dias": dias, "estado": estado or "—",
+                "_apagada": fuera or estado == "Vencida"}
+
+    def validar(v):
+        return preceptores.validar(dict(v, en_lista="no" if v["en_lista"].lower().startswith("n") else "si"))
+
+    t = TablaEditable(
+        pantalla,
+        columnas=[("nombre", "Apellido y nombre", 230), ("cargo", "Cargo", 130), ("dias", "Días", 110),
+                  ("estado", "Licencia hoy", 170)],
+        campos=[("apellido", "Apellido", None), ("nombre", "Nombre", None), ("cargo", "Cargo", None),
+                ("dias", "Días que viene", None), ("lic_desde", "Licencia desde", None), ("lic_hasta", "Licencia hasta", None),
+                ("lic_motivo", "Motivo de la licencia", None), ("en_lista", "¿Sigue en la lista?", None)],
+        leer=lambda: preceptores.leer(RUTA_PRECEPTORES),
+        guardar=lambda filas: preceptores.guardar(RUTA_PRECEPTORES, filas),
+        opciones=lambda: {"cargo": list(dict.fromkeys(CARGOS_PRECEPTORES + [f["cargo"] for f in t.filas if f["cargo"]])),
+                          "dias": CASILLAS_DIAS, "lic_motivo": repositorio.MOTIVOS, "en_lista": ["Sí", "No"]},
+        validar=validar, vista=vista)
+    t.vista_para_editar = lambda f: dict(f, lic_desde=repositorio.iso_a_fecha(f["lic_desde"]),
+                                         lic_hasta=repositorio.iso_a_fecha(f["lic_hasta"]),
+                                         en_lista="Sí" if f["en_lista"] != "no" else "No")
+    t.ayuda_formulario = ("Podés escribir otro cargo. Las fechas de la licencia van como día/mes/año; \"hasta\" puede quedar "
+                          "vacío si todavía no se sabe. Sin licencia, dejá esos campos vacíos.")
+    t.pack(fill="both", expand=True)
+
+    pie = ttk.Frame(pantalla)
+    pie.pack(fill="x", pady=(10, 0))
+
+    def armar():
+        try:
+            ruta = libro_firmas.armar_preceptores(RUTA_PLANTILLA, RUTA_PRECEPTORES, os.path.join(BASE, "salida"))
+        except (ValueError, OSError) as e:
+            messagebox.showerror("No se pudo armar la lista", str(e), parent=pantalla)
+            return
+        os.startfile(ruta)
+        messagebox.showinfo("Lista armada", "Se abrió en Excel. Para imprimir: Archivo > Imprimir, papel A4 vertical y la "
+                            "escala en 100 % (sin \"Ajustar a una página\"). Si cambiás algo en esta pantalla, volvé a "
+                            "tocar el botón.", parent=pantalla)
+
+    ttk.Button(pie, text="Armar lista de preceptores", style="Primario.TButton", command=armar).pack(side="left")
+    ttk.Label(pie, text="Sale en su propio Excel, sin necesitar el horario de Untis.", style="Tenue.TLabel").pack(
+        side="left", padx=12)
     pantalla.al_mostrar = t.recargar
     return pantalla
 
@@ -797,14 +883,15 @@ class App(tk.Tk):
         self.contenido = ttk.Frame(self)
         self.pantallas = {}
         secciones = [("armar", "Armar libro", "▤"), ("licencias", "Licencias", "✎"), ("manuales", "Horarios a mano", "◷"),
-                    ("excluidos", "Excluidos", "⊘")]
+                    ("excluidos", "Excluidos", "⊘"), ("preceptores", "Preceptores", "☰")]
         self.lateral = Lateral(self, self, secciones)
         self.lateral.pack(side="left", fill="y")
         self.contenido.pack(side="left", fill="both", expand=True)
         for clave, fabrica in (("armar", lambda: PantallaArmar(self.contenido, self)),
                                ("licencias", lambda: pantalla_licencias(self.contenido)),
                                ("manuales", lambda: pantalla_manuales(self.contenido)),
-                               ("excluidos", lambda: pantalla_excluidos(self.contenido))):
+                               ("excluidos", lambda: pantalla_excluidos(self.contenido)),
+                               ("preceptores", lambda: pantalla_preceptores(self.contenido))):
             self.pantallas[clave] = fabrica()  # cada pantalla se arma una vez; cambiar de sección solo cambia cuál se ve
         self.mostrar("armar")
         if rutas.AVISO:

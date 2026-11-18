@@ -26,7 +26,7 @@ $portable = "$pub\portable\Libro de firmas"
 New-Item -ItemType Directory -Path "$pub\portable" | Out-Null
 Copy-Item $carpeta $portable -Recurse
 New-Item -ItemType Directory -Path "$portable\datos", "$portable\entrada", "$portable\salida" | Out-Null
-foreach ($f in "plantilla_libro.xlsx", "docentes.csv", "mdb_tratamiento.csv", "excepciones.csv", "licencias.csv", "horarios_manuales.csv", "turnos_ultimo_libro.csv") {
+foreach ($f in "plantilla_libro.xlsx", "docentes.csv", "mdb_tratamiento.csv", "excepciones.csv", "licencias.csv", "horarios_manuales.csv", "turnos_ultimo_libro.csv", "preceptores.csv") {
     $origen = Join-Path $PSScriptRoot "datos\$f"
     if (Test-Path $origen) { Copy-Item $origen "$portable\datos\$f" } else { Write-Warning "Falta datos\$f" }
 }

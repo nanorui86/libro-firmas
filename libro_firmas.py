@@ -20,6 +20,7 @@ import horarios_manuales
 import licencias
 import maestro
 import parse_horario
+import preceptores
 import render_libro
 import rutas
 import turnos_previos
@@ -54,6 +55,23 @@ def armar_listas(asignacion, maes):
         for dia in range(5):
             listas[turno][dia].sort(key=lambda x: clave_docente(x[0]))
     return listas
+
+
+def repositorio_fecha(iso):
+    """'2026-11-18' -> '18/11/2026'."""
+    return date.fromisoformat(iso).strftime("%d/%m/%Y")
+
+
+def armar_preceptores(plantilla, ruta_preceptores, salida, hoy=None):
+    """Arma un Excel con solo la hoja de preceptores (no necesita el horario de Untis). Devuelve su ruta."""
+    hoy = hoy or date.today()
+    filas = [preceptores.validar(f) for f in preceptores.leer(ruta_preceptores)]
+    if not filas:
+        raise ValueError("Todavía no hay preceptores cargados: agregalos en esta pantalla.")
+    os.makedirs(salida, exist_ok=True)
+    ruta = os.path.join(salida, "Lista de preceptores 2026.xlsx")
+    render_libro.render_solo_preceptores(plantilla, ruta, preceptores.listas_por_dia(filas, hoy))
+    return ruta
 
 
 def _que_hace(e):
@@ -117,6 +135,7 @@ def crear_parser():
     ap.add_argument("--manuales", default=rutas.en_datos("horarios_manuales.csv"), help="horarios transcriptos a mano (escaneos)")
     ap.add_argument("--licencias", default=rutas.en_datos("licencias.csv"), help="registro de licencias (desde, hasta, motivo)")
     ap.add_argument("--turnos-previos", default=rutas.en_datos("turnos_ultimo_libro.csv"), help="memoria del último libro generado")
+    ap.add_argument("--preceptores", default=rutas.en_datos("preceptores.csv"), help="lista de preceptores (si existe, el libro lleva la hoja prec.)")
     ap.add_argument("--salida", default="salida")
     ap.add_argument("--fecha", help="fecha de referencia AAAA-MM-DD (por defecto, hoy)")
     return ap
@@ -128,7 +147,7 @@ def opciones(profesores, base=None, **cambios):
     for nombre, valor in cambios.items():
         setattr(args, nombre, valor)
     if base:
-        for nombre in ("plantilla", "maestro", "mdb", "excepciones", "manuales", "licencias", "turnos_previos", "salida"):
+        for nombre in ("plantilla", "maestro", "mdb", "excepciones", "manuales", "licencias", "turnos_previos", "preceptores", "salida"):
             ruta = getattr(args, nombre)
             if ruta and not os.path.isabs(ruta):
                 setattr(args, nombre, os.path.join(base, ruta))
@@ -266,6 +285,25 @@ def generar(args):
                        " quien ya no tiene clases ese día). Los nombres escritos distinto ya están emparejados.")
         informe += diferencias(antes, listas) or ["  ninguna"]
 
+    lista_preceptores = None
+    if os.path.exists(args.preceptores):
+        try:
+            filas_prec = [preceptores.validar(f) for f in preceptores.leer(args.preceptores)]
+        except ValueError as e:
+            detener.append(f"{os.path.basename(args.preceptores)}: {e}")
+        else:
+            lista_preceptores = preceptores.listas_por_dia(filas_prec, hoy)
+            informe.append("\nPreceptores (hoja prec. 2026):")
+            informe.append("  Qué hacer: nada. Se cambian en la pantalla Preceptores (días, altas, bajas y licencias).")
+            informe.append("  " + "  ".join(f"{NOMBRE_DIA[i][:3]} {len(lista_preceptores[i]):2}" for i in range(5)))
+            for f in preceptores.licencias_vigentes(filas_prec, hoy):
+                fechas = f"desde {repositorio_fecha(f['lic_desde'])}" if f["lic_desde"] else "sin fecha de inicio"
+                fechas += f" hasta {repositorio_fecha(f['lic_hasta'])}" if f["lic_hasta"] else ", sin fecha de fin"
+                sale = "sale de la lista" if f["en_lista"] == "no" else "sigue en la lista"
+                informe.append(f"  Licencia: {preceptores.impreso(f)} · {f['lic_motivo'] or 'sin motivo'} · {fechas} · {sale}")
+                if not f["lic_hasta"]:
+                    avisos_app.append(("info", f"{preceptores.impreso(f)} (preceptores): la licencia no tiene fecha de fin."))
+
     ruta_informe = os.path.join(args.salida, "informe.txt")
     conteo = {turno: [len(dia) for dia in listas[turno]] for turno in listas}
     if detener:
@@ -277,7 +315,7 @@ def generar(args):
 
     nombre = f"Lib. Firmas 2026 (horario {vigencia or hoy.isoformat()}).xlsx"
     ruta_libro = os.path.join(args.salida, nombre)
-    render_libro.render(args.plantilla, ruta_libro, listas)
+    render_libro.render(args.plantilla, ruta_libro, listas, preceptores=lista_preceptores)
     turnos_previos.guardar(listas, args.turnos_previos)  # para que las licencias recuerden los turnos de siempre
     informe.append(f"\nGenerado: {ruta_libro}")
     texto = "\n".join(informe) + "\n"

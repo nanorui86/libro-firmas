@@ -37,6 +37,15 @@ _CAJA = Border(left=_LADO, right=_LADO, top=_LADO, bottom=_LADO)
 ROTULOS = ("Lunes", "Martes", "Miércoles", "Jueves", "Viernes")
 
 
+# Hoja de preceptores: una sola hoja con los cinco días. Lunes, Martes, Viernes y Miércoles van en fila (columnas A, E, I, M; el rótulo
+# en la segunda columna de cada bloque) y Jueves debajo, en las columnas I. Cada bloque tiene 23 renglones y crece si hace falta.
+HOJA_PRECEPTORES = "prec. 2026"
+BLOQUES_PRECEPTORES = ((0, 1, "Lunes"), (1, 5, "Martes"), (4, 9, "Viernes"), (2, 13, "Miércoles"))  # (día 0-4, columna, rótulo)
+JUEVES = (3, 9, "Jueves")
+RENGLONES_PRECEPTORES = 23
+FILAS_ENTRE_BLOQUES = 7  # el rótulo de Jueves va 7 filas debajo del último renglón de arriba (fila 31 cuando hay 23)
+
+
 class DesbordeError(ValueError):
     pass
 
@@ -59,12 +68,78 @@ def _estilo(ws, fila, columna):
     return copy(ws.cell(fila, columna)._style)
 
 
-def render(plantilla, salida, listas):
-    """listas: {turno: [por día: [(nombre_impreso, tratamiento), ...]]} ya ordenadas."""
+def _hoja_preceptores(ws, listas):
+    """listas: [por día 0-4: [(nombre_impreso, cargo)]] ya ordenadas. Reescribe la hoja con la misma forma que el molde."""
+    arriba = max([RENGLONES_PRECEPTORES] + [len(listas[d]) for d, _, _ in BLOQUES_PRECEPTORES])
+    abajo = max(RENGLONES_PRECEPTORES, len(listas[JUEVES[0]]))
+    alto = lambda fila: ws.row_dimensions[fila].height  # noqa: E731
+    alto_renglon, alto_titulo, alto_jueves = alto(2), alto(31), alto(32)
+    alto_separacion = [alto(r) for r in range(RENGLONES_PRECEPTORES + 2, RENGLONES_PRECEPTORES + FILAS_ENTRE_BLOQUES + 1)]
+    molde = {c0: [_estilo(ws, 2, c0 + k) for k in range(4)] for _, c0, _ in BLOQUES_PRECEPTORES}
+    molde_jueves = [_estilo(ws, 32, JUEVES[1] + k) for k in range(4)]
+    rotulo = {c0: _estilo(ws, 1, c0 + 1) for _, c0, _ in BLOQUES_PRECEPTORES}
+    rotulo_jueves = _estilo(ws, 31, JUEVES[1] + 1)
+
+    ultima = max(ws.max_row, 2 * (arriba + abajo) + 12)
+    for r in range(2, ultima + 1):
+        ws.row_dimensions[r].height = None
+        for c in range(1, 17):
+            celda = ws.cell(r, c)
+            celda.value = None
+            celda._style = StyleArray()
+
+    def bloque(fila0, c0, estilos, filas, renglones, alto_fila):
+        for n in range(renglones):
+            r = fila0 + n
+            ws.row_dimensions[r].height = alto_fila
+            for k in range(4):
+                celda = ws.cell(r, c0 + k)
+                celda._style = copy(estilos[k])
+                celda.border = copy(_CAJA) if k < 3 else Border()
+            ws.cell(r, c0).value = n + 1
+            if n < len(filas):
+                ws.cell(r, c0 + 1).value, ws.cell(r, c0 + 2).value = filas[n]
+                alineacion = copy(ws.cell(r, c0 + 1).alignment)
+                alineacion.wrap_text = True  # un nombre largo se parte en dos líneas en vez de cortarse al imprimir
+                ws.cell(r, c0 + 1).alignment = alineacion
+
+    for dia, c0, texto in BLOQUES_PRECEPTORES:
+        ws.cell(1, c0 + 1).value = texto
+        ws.cell(1, c0 + 1)._style = copy(rotulo[c0])
+        bloque(2, c0, molde[c0], listas[dia], arriba, alto_renglon)
+    for k, altura in enumerate(alto_separacion):
+        ws.row_dimensions[arriba + 2 + k].height = altura
+    titulo = arriba + FILAS_ENTRE_BLOQUES + 1
+    ws.row_dimensions[titulo].height = alto_titulo
+    ws.cell(titulo, JUEVES[1] + 1).value = JUEVES[2]
+    ws.cell(titulo, JUEVES[1] + 1)._style = copy(rotulo_jueves)
+    bloque(titulo + 1, JUEVES[1], molde_jueves, listas[JUEVES[0]], abajo, alto_jueves)
+    # Dos áreas de impresión, cada una en sus páginas: Lunes y Martes (A-H), y Viernes, Miércoles y Jueves (I-O). Sin esto Excel
+    # imprime hojas en blanco (la columna P, ancha y sin nada, no entra en el ancho) y deja en una página aparte los números de
+    # la columna I (el original también las saca).
+    ws.print_area = f"A1:H{arriba + 1},I1:O{titulo + abajo}"
+
+
+def render_solo_preceptores(plantilla, salida, preceptores):
+    """Libro con solo la hoja de preceptores (no necesita el horario de Untis)."""
     wb = openpyxl.load_workbook(plantilla)
     for nombre in wb.sheetnames:
-        if nombre not in HOJAS.values():
+        if nombre != HOJA_PRECEPTORES:
             wb.remove(wb[nombre])
+    _hoja_preceptores(wb[HOJA_PRECEPTORES], preceptores)
+    wb.save(salida)
+
+
+def render(plantilla, salida, listas, preceptores=None):
+    """listas: {turno: [por día: [(nombre_impreso, tratamiento), ...]]} ya ordenadas.
+    preceptores: [por día: [(nombre_impreso, cargo)]] o None (sin la hoja de preceptores)."""
+    wb = openpyxl.load_workbook(plantilla)
+    conservar = set(HOJAS.values()) | ({HOJA_PRECEPTORES} if preceptores is not None else set())
+    for nombre in wb.sheetnames:
+        if nombre not in conservar:
+            wb.remove(wb[nombre])
+    if preceptores is not None:
+        _hoja_preceptores(wb[HOJA_PRECEPTORES], preceptores)
 
     for turno, nombre_hoja in HOJAS.items():
         ws = wb[nombre_hoja]

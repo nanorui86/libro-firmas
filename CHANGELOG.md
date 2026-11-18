@@ -2,6 +2,13 @@
 
 Cada cambio sube la versión (`version.py`); la versión se ve abajo a la izquierda en la ventana.
 
+## 1.7.0 — 2026-11-18
+- Lista de preceptores: pantalla nueva con una fila por persona (días que viene, cargo y licencia). La hoja `prec. 2026` sale en el
+  mismo Excel del libro, y el botón "Armar lista de preceptores" arma solo esa hoja sin necesitar el horario de Untis.
+- Licencias de preceptores con el mismo criterio que las de docentes (siguen en la lista o salen mientras dura la licencia y vuelven
+  solas al vencer), en su propio archivo.
+- La hoja se agranda sola si un día pasa de 23 personas. Se imprime sin las hojas en blanco que sacaba el libro original (4 páginas).
+
 ## 1.6.3 — 2026-10-29
 - Datos compartidos sin pisarse: Licencias, Horarios a mano y Excluidos se vuelven a leer cada vez que se abre la pantalla, y antes
   de agregar, editar o quitar se comprueba que otra PC no haya cambiado la lista (si cambió, se actualiza y avisa). Ya no hace

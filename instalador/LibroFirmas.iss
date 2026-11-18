@@ -55,6 +55,7 @@ Source: "..\datos\excepciones.csv"; DestDir: "{tmp}"; Flags: dontcopy skipifsour
 Source: "..\datos\licencias.csv"; DestDir: "{tmp}"; Flags: dontcopy skipifsourcedoesntexist
 Source: "..\datos\horarios_manuales.csv"; DestDir: "{tmp}"; Flags: dontcopy skipifsourcedoesntexist
 Source: "..\datos\turnos_ultimo_libro.csv"; DestDir: "{tmp}"; Flags: dontcopy skipifsourcedoesntexist
+Source: "..\datos\preceptores.csv"; DestDir: "{tmp}"; Flags: dontcopy skipifsourcedoesntexist
 
 [Icons]
 Name: "{group}\Libro de firmas"; Filename: "{app}\Libro de firmas.exe"
@@ -84,7 +85,7 @@ var
   I: Integer;
   Destino: String;
 begin
-  SetArrayLength(Nombres, 7);
+  SetArrayLength(Nombres, 8);
   Nombres[0] := 'plantilla_libro.xlsx';
   Nombres[1] := 'docentes.csv';
   Nombres[2] := 'mdb_tratamiento.csv';
@@ -92,6 +93,7 @@ begin
   Nombres[4] := 'licencias.csv';
   Nombres[5] := 'horarios_manuales.csv';
   Nombres[6] := 'turnos_ultimo_libro.csv';
+  Nombres[7] := 'preceptores.csv';
   for I := 0 to GetArrayLength(Nombres) - 1 do
   begin
     Destino := '{#CarpetaDatos}\' + Nombres[I];
